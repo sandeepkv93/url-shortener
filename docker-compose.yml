@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: urlshortener-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: urlshortener
+      POSTGRES_USER: urlshortener
+      POSTGRES_PASSWORD: password123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/internal/infrastructure/database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - urlshortener-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urlshortener -d urlshortener"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: urlshortener-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis123
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - urlshortener-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Backend API (Development)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: urlshortener-backend
+    restart: unless-stopped
+    environment:
+      - GO_ENV=development
+      - PORT=8080
+      - DATABASE_URL=postgres://urlshortener:password123@postgres:5432/urlshortener?sslmode=disable
+      - REDIS_URL=redis://:redis123@redis:6379
+      - JWT_SECRET=development-jwt-secret-change-in-production
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+      - FRONTEND_URL=http://localhost:3000
+      - BASE_URL=http://localhost:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - go_mod_cache:/go/pkg/mod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - urlshortener-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: urlshortener-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:8080/api
+      - VITE_BASE_URL=http://localhost:8080
+    ports:
+      - "3000:3000"
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - node_modules:/app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - urlshortener-network
+
+  # Nginx Reverse Proxy (Optional for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: urlshortener-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - urlshortener-network
+    profiles:
+      - production
+
+  # Development Tools
+  adminer:
+    image: adminer:latest
+    container_name: urlshortener-adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - urlshortener-network
+    profiles:
+      - tools
+
+  # Redis Commander (Development Tool)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: urlshortener-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:redis123
+    ports:
+      - "8082:8081"
+    depends_on:
+      - redis
+    networks:
+      - urlshortener-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  go_mod_cache:
+    driver: local
+  node_modules:
+    driver: local
+
+networks:
+  urlshortener-network:
+    driver: bridge

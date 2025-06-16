@@ -1,0 +1,149 @@
+version: '3'
+
+vars:
+  BACKEND_DIR: ./backend
+  FRONTEND_DIR: ./frontend
+  DOCKER_COMPOSE_FILE: docker-compose.yml
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  setup:
+    desc: Set up the development environment
+    cmds:
+      - cp .env.example .env
+      - cp {{.BACKEND_DIR}}/.env.example {{.BACKEND_DIR}}/.env
+      - cp {{.FRONTEND_DIR}}/.env.example {{.FRONTEND_DIR}}/.env
+      - docker-compose up -d postgres redis
+      - sleep 5
+      - task: migrate
+
+  # Backend tasks
+  backend:build:
+    desc: Build backend application
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go build -o bin/server cmd/server/main.go
+
+  backend:test:
+    desc: Run backend tests
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go test -v -race -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+
+  backend:test:coverage:
+    desc: Check backend test coverage
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -func=coverage.out | grep total
+
+  backend:lint:
+    desc: Lint backend code
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - golangci-lint run
+
+  backend:run:
+    desc: Run backend server
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go run cmd/server/main.go
+
+  # Frontend tasks
+  frontend:install:
+    desc: Install frontend dependencies
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm install
+
+  frontend:build:
+    desc: Build frontend application
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run build
+
+  frontend:test:
+    desc: Run frontend tests
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run test:coverage
+
+  frontend:lint:
+    desc: Lint frontend code
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run lint
+
+  frontend:dev:
+    desc: Run frontend in development mode
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run dev
+
+  # Database tasks
+  migrate:
+    desc: Run database migrations
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go run cmd/migrate/main.go
+
+  migrate:create:
+    desc: Create new migration
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - migrate create -ext sql -dir migrations {{.CLI_ARGS}}
+
+  # Docker tasks
+  docker:build:
+    desc: Build all Docker images
+    cmds:
+      - docker-compose build
+
+  docker:up:
+    desc: Start all services
+    cmds:
+      - docker-compose up -d
+
+  docker:down:
+    desc: Stop all services
+    cmds:
+      - docker-compose down
+
+  docker:logs:
+    desc: View logs
+    cmds:
+      - docker-compose logs -f
+
+  # Testing tasks
+  test:all:
+    desc: Run all tests
+    cmds:
+      - task: backend:test
+      - task: frontend:test
+
+  test:coverage:
+    desc: Check test coverage for all components
+    cmds:
+      - task: backend:test:coverage
+      - task: frontend:test
+
+  # Development tasks
+  dev:
+    desc: Start development environment
+    cmds:
+      - docker-compose up -d postgres redis
+      - task: frontend:dev &
+      - task: backend:run
+
+  clean:
+    desc: Clean up build artifacts
+    cmds:
+      - rm -rf {{.BACKEND_DIR}}/bin
+      - rm -rf {{.FRONTEND_DIR}}/dist
+      - rm -rf {{.FRONTEND_DIR}}/node_modules
+      - docker-compose down -v
