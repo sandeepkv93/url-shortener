@@ -8,91 +8,68 @@ import (
 
 type AuthService interface {
 	// Authentication
-	Register(ctx context.Context, req *domain.CreateUserRequest) (*domain.UserResponse, error)
-	Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error)
-	RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenResponse, error)
-	Logout(ctx context.Context, token string) error
-	
-	// Password management
-	ResetPassword(ctx context.Context, email string) error
-	ConfirmPasswordReset(ctx context.Context, token, newPassword string) error
-	ChangePassword(ctx context.Context, userID uint, oldPassword, newPassword string) error
+	Register(ctx context.Context, req domain.RegisterRequest) (*domain.AuthResponse, error)
+	Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*domain.AuthResponse, error)
+	Logout(ctx context.Context, userID uint) error
 	
 	// Token management
 	ValidateToken(ctx context.Context, token string) (*domain.TokenClaims, error)
-	GenerateTokens(ctx context.Context, user *domain.User) (*domain.TokenResponse, error)
-	RevokeToken(ctx context.Context, token string) error
 	
 	// User management
 	GetUserProfile(ctx context.Context, userID uint) (*domain.UserResponse, error)
-	UpdateUserProfile(ctx context.Context, userID uint, req *domain.UpdateUserRequest) (*domain.UserResponse, error)
-	DeleteAccount(ctx context.Context, userID uint) error
+	UpdateUserProfile(ctx context.Context, userID uint, req domain.UpdateUserRequest) (*domain.UserResponse, error)
+	ChangePassword(ctx context.Context, userID uint, req domain.ChangePasswordRequest) error
 }
 
 type URLService interface {
 	// URL shortening
-	ShortenURL(ctx context.Context, req *domain.CreateShortURLRequest, userID *uint) (*domain.ShortURLResponse, error)
-	GetOriginalURL(ctx context.Context, shortCode string) (*domain.ShortURLResponse, error)
+	ShortenURL(ctx context.Context, req domain.ShortenURLRequest) (*domain.ShortURL, error)
+	GetOriginalURL(ctx context.Context, shortCode string) (*domain.ShortURL, error)
 	
 	// URL management
-	GetURL(ctx context.Context, id uint, userID *uint) (*domain.ShortURLResponse, error)
-	UpdateURL(ctx context.Context, id uint, req *domain.UpdateShortURLRequest, userID uint) (*domain.ShortURLResponse, error)
+	GetUserURLs(ctx context.Context, userID uint, offset, limit int) ([]*domain.ShortURL, int64, error)
+	UpdateURL(ctx context.Context, id uint, userID uint, req domain.UpdateURLRequest) (*domain.ShortURL, error)
 	DeleteURL(ctx context.Context, id uint, userID uint) error
 	
-	// URL queries
-	ListUserURLs(ctx context.Context, userID uint, page, pageSize int, filter *domain.URLFilter) (*domain.ShortURLListResponse, error)
-	SearchURLs(ctx context.Context, userID uint, query string, page, pageSize int) (*domain.ShortURLListResponse, error)
-	
 	// URL operations
-	RedirectURL(ctx context.Context, shortCode, ipAddress, userAgent, referer string) (string, error)
-	ToggleURLStatus(ctx context.Context, id uint, userID uint) (*domain.ShortURLResponse, error)
+	RecordClick(ctx context.Context, shortURL *domain.ShortURL, clickData domain.ClickData) error
+	ValidatePassword(ctx context.Context, shortCode, password string) (bool, error)
 	
 	// URL utilities
-	GenerateShortCode(ctx context.Context, length int) (string, error)
-	ValidateCustomAlias(ctx context.Context, alias string) error
-	CheckURLAvailability(ctx context.Context, shortCode string) (bool, error)
-	
-	// Bulk operations
-	BulkCreateURLs(ctx context.Context, urls []domain.CreateShortURLRequest, userID uint) ([]*domain.ShortURLResponse, error)
-	BulkUpdateURLs(ctx context.Context, updates []domain.BulkUpdateRequest, userID uint) error
-	BulkDeleteURLs(ctx context.Context, ids []uint, userID uint) error
+	GetURLStats(ctx context.Context, id uint, userID uint) (*domain.URLStats, error)
+	GetPopularURLs(ctx context.Context, limit int) ([]*domain.ShortURL, error)
+	CleanupExpiredURLs(ctx context.Context) error
 }
 
 type AnalyticsService interface {
-	// Click recording
-	RecordClick(ctx context.Context, req *domain.RecordClickRequest) error
-	
-	// Analytics queries
-	GetURLAnalytics(ctx context.Context, shortURLID uint, userID uint, period string) (*domain.ClickStats, error)
-	GetGeoAnalytics(ctx context.Context, shortURLID uint, userID uint) (*domain.GeoStats, error)
-	GetTimelineAnalytics(ctx context.Context, shortURLID uint, userID uint, period string) (*domain.TimelineStats, error)
-	
 	// Dashboard analytics
-	GetUserDashboard(ctx context.Context, userID uint) (*domain.UserDashboard, error)
-	GetGlobalDashboard(ctx context.Context) (*domain.GlobalDashboard, error)
+	GetDashboardStats(ctx context.Context, userID uint) (*domain.DashboardStats, error)
+	GetGlobalStats(ctx context.Context) (*domain.GlobalStats, error)
 	
-	// Report generation
-	GenerateAnalyticsReport(ctx context.Context, shortURLID uint, userID uint, format string) (*domain.AnalyticsReport, error)
-	ExportAnalytics(ctx context.Context, shortURLID uint, userID uint, format string) ([]byte, error)
+	// URL analytics
+	GetURLAnalytics(ctx context.Context, shortURLID uint, userID uint) (*domain.URLAnalytics, error)
+	GetTopPerformingURLs(ctx context.Context, userID uint, limit int) ([]*domain.URLPerformance, error)
 	
-	// Real-time analytics
-	GetRealTimeStats(ctx context.Context, shortURLID uint, userID uint) (*domain.RealTimeStats, error)
-	SubscribeToRealTimeUpdates(ctx context.Context, shortURLID uint, userID uint) (<-chan *domain.RealTimeUpdate, error)
+	// Detailed analytics
+	GetClickTimeline(ctx context.Context, shortURLID uint, userID uint, period string) (*domain.TimelineStats, error)
+	GetGeographicStats(ctx context.Context, shortURLID uint, userID uint) (*domain.GeoStats, error)
+	GetDeviceStats(ctx context.Context, shortURLID uint, userID uint) (*domain.DeviceStats, error)
+	GetReferrerStats(ctx context.Context, shortURLID uint, userID uint) ([]domain.RefererStat, error)
+	
+	// Export functionality
+	ExportAnalytics(ctx context.Context, userID uint, format string, dateRange domain.DateRange) ([]byte, error)
 }
 
 type QRService interface {
 	// QR code generation
-	GenerateQRCode(ctx context.Context, shortURL string, options *domain.QROptions) (*domain.QRCodeResponse, error)
-	GenerateQRCodeBytes(ctx context.Context, shortURL string, format string, size int) ([]byte, error)
+	GenerateQRCode(ctx context.Context, req domain.QRCodeRequest) (*domain.QRCodeResponse, error)
+	GenerateQRCodeForURL(ctx context.Context, shortCode string, options domain.QRCodeOptions) (*domain.QRCodeResponse, error)
 	
-	// QR code customization
-	GenerateCustomQRCode(ctx context.Context, req *domain.CustomQRRequest) (*domain.QRCodeResponse, error)
-	
-	// QR code management
-	GetQRCodeHistory(ctx context.Context, userID uint, page, pageSize int) (*domain.QRCodeListResponse, error)
-	
-	// Bulk QR generation
-	BulkGenerateQRCodes(ctx context.Context, urls []string, options *domain.QROptions) ([]*domain.QRCodeResponse, error)
+	// QR code utilities
+	GetQRCodeFormats(ctx context.Context) []string
+	GetQRCodeSizes(ctx context.Context) []int
+	ValidateQRCodeOptions(ctx context.Context, options domain.QRCodeOptions) error
 }
 
 type NotificationService interface {
@@ -132,4 +109,24 @@ type HealthService interface {
 	// System metrics
 	GetSystemMetrics(ctx context.Context) (*domain.SystemMetrics, error)
 	GetApplicationMetrics(ctx context.Context) (*domain.ApplicationMetrics, error)
+}
+
+// Additional service interfaces needed by the service implementations
+
+type JWTService interface {
+	GenerateAccessToken(userID uint, email string) (string, error)
+	GenerateRefreshToken(userID uint) (string, error)
+	ValidateAccessToken(token string) (*domain.TokenClaims, error)
+	ValidateRefreshToken(token string) (*domain.TokenClaims, error)
+}
+
+type ConfigService interface {
+	GetBaseURL() string
+	GetJWTSecret() string
+	GetDatabaseURL() string
+	GetRedisURL() string
+}
+
+type QRCodeProvider interface {
+	GenerateQRCode(url string, options domain.QRGenerationOptions) ([]byte, error)
 }

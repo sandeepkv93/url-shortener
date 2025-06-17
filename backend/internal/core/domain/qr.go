@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"image/color"
 	"time"
 )
 
@@ -29,16 +30,11 @@ type QRCustomization struct {
 }
 
 type QRCodeResponse struct {
-	ID          uint      `json:"id"`
-	ShortURLID  uint      `json:"short_url_id"`
-	Format      string    `json:"format"`
-	Size        int       `json:"size"`
-	URL         string    `json:"url"`          // Download URL
-	DataURL     string    `json:"data_url"`     // Base64 data URL
-	FileName    string    `json:"file_name"`
-	FileSize    int64     `json:"file_size"`
-	CreatedAt   time.Time `json:"created_at"`
-	ExpiresAt   *time.Time `json:"expires_at"`
+	Data     []byte `json:"-"`                // Raw QR code data
+	Format   string `json:"format"`           // Image format (png, jpeg, svg, pdf)
+	Size     int    `json:"size"`             // Size in pixels
+	URL      string `json:"url"`              // The URL encoded in the QR code
+	MimeType string `json:"mime_type"`        // MIME type for HTTP responses
 }
 
 type QRCodeListResponse struct {
@@ -71,4 +67,43 @@ type QRBatch struct {
 	CreatedAt   time.Time `json:"created_at"`
 	CompletedAt *time.Time `json:"completed_at"`
 	Error       string    `json:"error,omitempty"`
+}
+
+// Additional models for QR service
+type QRCodeRequest struct {
+	URL              string `json:"url" validate:"required"`
+	ShortCode        string `json:"short_code,omitempty"`
+	Size             int    `json:"size,omitempty"`
+	Format           string `json:"format,omitempty"`
+	ForegroundColor  string `json:"foreground_color,omitempty"`
+	BackgroundColor  string `json:"background_color,omitempty"`
+	ErrorCorrection  string `json:"error_correction,omitempty"`
+	Border           int    `json:"border,omitempty"`
+	UserID           uint   `json:"user_id,omitempty"`
+}
+
+type QRCodeOptions struct {
+	Size             int    `json:"size,omitempty"`
+	Format           string `json:"format,omitempty"`
+	ForegroundColor  string `json:"foreground_color,omitempty"`
+	BackgroundColor  string `json:"background_color,omitempty"`
+	ErrorCorrection  string `json:"error_correction,omitempty"`
+	Border           int    `json:"border,omitempty"`
+}
+
+type QRGenerationOptions struct {
+	Size             int        `json:"size"`
+	Format           string     `json:"format"`
+	ForegroundColor  color.RGBA `json:"foreground_color"`
+	BackgroundColor  color.RGBA `json:"background_color"`
+	ErrorCorrection  int        `json:"error_correction"`
+	Border           int        `json:"border"`
+}
+
+// Validation methods
+func (r *QRCodeRequest) Validate() error {
+	if r.URL == "" && r.ShortCode == "" {
+		return ErrInvalidRequest
+	}
+	return nil
 }

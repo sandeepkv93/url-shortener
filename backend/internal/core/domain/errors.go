@@ -27,11 +27,15 @@ var (
 	ErrExpiredToken        = errors.New("token has expired")
 	ErrUnauthorized        = errors.New("unauthorized")
 	ErrForbidden          = errors.New("forbidden")
+	ErrUserInactive       = errors.New("user account is inactive")
+	ErrInvalidPassword    = errors.New("invalid password")
 
 	// Validation errors
 	ErrInvalidInput        = errors.New("invalid input")
+	ErrInvalidRequest      = errors.New("invalid request")
 	ErrMissingField        = errors.New("required field is missing")
 	ErrInvalidFieldFormat  = errors.New("invalid field format")
+	ErrInvalidShortCode    = errors.New("invalid short code")
 
 	// Database errors
 	ErrDatabaseConnection  = errors.New("database connection failed")
