@@ -233,7 +233,7 @@ func (s *authService) Logout(ctx context.Context, userID uint) error {
 	return nil
 }
 
-func (s *authService) GetUserProfile(ctx context.Context, userID uint) (*domain.UserResponse, error) {
+func (s *authService) GetProfile(ctx context.Context, userID uint) (*domain.UserResponse, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -249,7 +249,7 @@ func (s *authService) GetUserProfile(ctx context.Context, userID uint) (*domain.
 	}, nil
 }
 
-func (s *authService) UpdateUserProfile(ctx context.Context, userID uint, req domain.UpdateUserRequest) (*domain.UserResponse, error) {
+func (s *authService) UpdateProfile(ctx context.Context, userID uint, req domain.UpdateProfileRequest) (*domain.UserResponse, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
 		return nil, err

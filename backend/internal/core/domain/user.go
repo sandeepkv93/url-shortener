@@ -61,6 +61,12 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" validate:"required,min=8"`
 }
 
+type UpdateProfileRequest struct {
+	FirstName string `json:"first_name,omitempty" validate:"omitempty,max=50"`
+	LastName  string `json:"last_name,omitempty" validate:"omitempty,max=50"`
+	Email     string `json:"email,omitempty" validate:"omitempty,email"`
+}
+
 type RegisterRequest struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required,min=8"`
@@ -166,5 +172,10 @@ func (r *ChangePasswordRequest) Validate() error {
 	if len(r.NewPassword) < 8 {
 		return ErrInvalidPassword
 	}
+	return nil
+}
+
+func (r *UpdateProfileRequest) Validate() error {
+	// Basic validation for profile update requests
 	return nil
 }

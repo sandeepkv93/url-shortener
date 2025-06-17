@@ -17,8 +17,8 @@ type AuthService interface {
 	ValidateToken(ctx context.Context, token string) (*domain.TokenClaims, error)
 	
 	// User management
-	GetUserProfile(ctx context.Context, userID uint) (*domain.UserResponse, error)
-	UpdateUserProfile(ctx context.Context, userID uint, req domain.UpdateUserRequest) (*domain.UserResponse, error)
+	GetProfile(ctx context.Context, userID uint) (*domain.UserResponse, error)
+	UpdateProfile(ctx context.Context, userID uint, req domain.UpdateProfileRequest) (*domain.UserResponse, error)
 	ChangePassword(ctx context.Context, userID uint, req domain.ChangePasswordRequest) error
 }
 

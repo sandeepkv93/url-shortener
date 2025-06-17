@@ -15,6 +15,7 @@ var (
 
 	// URL errors
 	ErrShortURLNotFound    = errors.New("short URL not found")
+	ErrURLNotFound         = errors.New("URL not found")
 	ErrShortCodeExists     = errors.New("short code already exists")
 	ErrInvalidURL          = errors.New("invalid URL format")
 	ErrURLExpired          = errors.New("URL has expired")
