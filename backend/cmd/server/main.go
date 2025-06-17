@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"url-shortener/internal/config"
+	"url-shortener/internal/infrastructure/cache"
 	"url-shortener/internal/infrastructure/database"
 
 	"github.com/go-chi/chi/v5"
@@ -36,6 +37,17 @@ func main() {
 		log.Printf("Warning: Failed to run auto migrations: %v", err)
 	}
 
+	// Connect to Redis
+	redisAddr := fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port)
+	redisClient, err := cache.NewRedisClient(redisAddr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	defer redisClient.Close()
+
+	// Create cache service
+	cacheService := cache.NewCacheService(redisClient)
+
 	// Setup router
 	r := chi.NewRouter()
 
@@ -49,21 +61,61 @@ func main() {
 
 	// Health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Health(); err != nil {
+		// Check database health
+		dbErr := db.Health()
+		
+		// Check Redis health
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		redisErr := cacheService.Ping(ctx)
+		
+		// Determine overall health
+		if dbErr != nil || redisErr != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"status":"unhealthy","database":"down"}`))
+			status := map[string]string{
+				"status": "unhealthy",
+			}
+			if dbErr != nil {
+				status["database"] = "down"
+			} else {
+				status["database"] = "up"
+			}
+			if redisErr != nil {
+				status["redis"] = "down"
+			} else {
+				status["redis"] = "up"
+			}
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"status":"%s","database":"%s","redis":"%s"}`, 
+				status["status"], status["database"], status["redis"])
 			return
 		}
+		
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"healthy","database":"up"}`))
+		w.Write([]byte(`{"status":"healthy","database":"up","redis":"up"}`))
 	})
 
-	// Database stats endpoint (development only)
+	// Debug endpoints (development only)
 	if cfg.IsDevelopment() {
 		r.Get("/debug/db-stats", func(w http.ResponseWriter, r *http.Request) {
 			stats := db.GetStats()
 			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprintf(w, "%+v", stats)
+		})
+		
+		r.Get("/debug/redis-info", func(w http.ResponseWriter, r *http.Request) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			
+			info, err := cacheService.Info(ctx)
+			if err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				w.Write([]byte(`{"error":"failed to get redis info"}`))
+				return
+			}
+			
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte(info))
 		})
 	}
 
