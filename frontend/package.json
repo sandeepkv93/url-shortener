@@ -44,6 +44,7 @@
     "@testing-library/react": "^14.0.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/user-event": "^14.4.3",
-    "@vitest/coverage-c8": "^0.29.7"
+    "@vitest/coverage-c8": "^0.29.7",
+    "jsdom": "^22.1.0"
   }
 }
