@@ -74,9 +74,34 @@ func (s *ShortURL) ToResponse(baseURL string) *ShortURLResponse {
 	}
 }
 
+type URLFilter struct {
+	Status    string `json:"status,omitempty"` // active, expired, inactive
+	DateFrom  string `json:"date_from,omitempty"`
+	DateTo    string `json:"date_to,omitempty"`
+	Search    string `json:"search,omitempty"`
+	SortBy    string `json:"sort_by,omitempty"`    // created_at, click_count, expires_at
+	SortOrder string `json:"sort_order,omitempty"` // asc, desc
+}
+
+type BulkUpdateRequest struct {
+	IDs      []uint                 `json:"ids" validate:"required"`
+	Updates  UpdateShortURLRequest  `json:"updates"`
+}
+
+type RecordClickRequest struct {
+	ShortCode string `json:"short_code" validate:"required"`
+	IPAddress string `json:"ip_address"`
+	UserAgent string `json:"user_agent"`
+	Referer   string `json:"referer"`
+}
+
 func (s *ShortURL) IsExpired() bool {
 	if s.ExpiresAt == nil {
 		return false
 	}
 	return time.Now().After(*s.ExpiresAt)
+}
+
+func (s *ShortURL) IsAccessible() bool {
+	return s.IsActive && !s.IsExpired()
 }

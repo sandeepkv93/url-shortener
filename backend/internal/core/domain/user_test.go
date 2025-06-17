@@ -20,8 +20,8 @@ func TestUserToResponse(t *testing.T) {
 	assert.Equal(t, user.CreatedAt, response.CreatedAt)
 	assert.Equal(t, user.UpdatedAt, response.UpdatedAt)
 	
-	// Password should not be included in response
-	assert.Empty(t, response.Email) // This should actually test that password is not exposed
+	// Password should not be included in response (UserResponse struct doesn't have Password field)
+	assert.Equal(t, user.Email, response.Email) // Email should be included in response
 }
 
 func TestUserValidation(t *testing.T) {
