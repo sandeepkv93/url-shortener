@@ -61,7 +61,7 @@ func (suite *RepositoryTestSuite) SetupTest() {
 	suite.testURL = &domain.ShortURL{
 		ShortCode:   "test123",
 		OriginalURL: "https://example.com",
-		UserID:      &suite.testUser.ID,
+		UserID:      suite.testUser.ID,
 		IsActive:    true,
 	}
 	err = suite.urlRepo.Create(suite.ctx, suite.testURL)
@@ -183,7 +183,7 @@ func (suite *RepositoryTestSuite) TestURLRepository_Create() {
 	url := &domain.ShortURL{
 		ShortCode:   "new123",
 		OriginalURL: "https://newexample.com",
-		UserID:      &suite.testUser.ID,
+		UserID:      suite.testUser.ID,
 		IsActive:    true,
 	}
 
@@ -195,7 +195,7 @@ func (suite *RepositoryTestSuite) TestURLRepository_Create() {
 	duplicateURL := &domain.ShortURL{
 		ShortCode:   "new123",
 		OriginalURL: "https://another.com",
-		UserID:      &suite.testUser.ID,
+		UserID:      suite.testUser.ID,
 	}
 	err = suite.urlRepo.Create(suite.ctx, duplicateURL)
 	suite.Error(err)
@@ -248,7 +248,7 @@ func (suite *RepositoryTestSuite) TestURLRepository_GetExpiredURLs() {
 	expiredURL := &domain.ShortURL{
 		ShortCode:   "expired",
 		OriginalURL: "https://expired.com",
-		UserID:      &suite.testUser.ID,
+		UserID:      suite.testUser.ID,
 		ExpiresAt:   &pastTime,
 		IsActive:    true,
 	}

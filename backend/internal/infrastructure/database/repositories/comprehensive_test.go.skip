@@ -1,0 +1,547 @@
+package repositories
+
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/suite"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"url-shortener/internal/core/domain"
+	"url-shortener/internal/core/ports"
+)
+
+type ComprehensiveTestSuite struct {
+	suite.Suite
+	db        *gorm.DB
+	userRepo  ports.UserRepository
+	urlRepo   ports.URLRepository
+	clickRepo ports.ClickRepository
+	ctx       context.Context
+	testUser  *domain.User
+	testURL   *domain.ShortURL
+}
+
+func (suite *ComprehensiveTestSuite) SetupSuite() {
+	suite.ctx = context.Background()
+
+	// Create in-memory SQLite database for testing
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	suite.Require().NoError(err)
+
+	// Auto-migrate the schema
+	err = db.AutoMigrate(&domain.User{}, &domain.ShortURL{}, &domain.Click{})
+	suite.Require().NoError(err)
+
+	suite.db = db
+
+	// Initialize repositories
+	suite.userRepo = NewUserRepository(db)
+	suite.urlRepo = NewURLRepository(db)
+	suite.clickRepo = NewClickRepository(db)
+}
+
+func (suite *ComprehensiveTestSuite) SetupTest() {
+	// Clean up tables before each test
+	suite.db.Exec("DELETE FROM clicks")
+	suite.db.Exec("DELETE FROM short_urls")
+	suite.db.Exec("DELETE FROM users")
+
+	// Create test user
+	suite.testUser = &domain.User{
+		Email:    "test@example.com",
+		Password: "hashedpassword",
+	}
+	err := suite.userRepo.Create(suite.ctx, suite.testUser)
+	suite.Require().NoError(err)
+
+	// Create test URL
+	suite.testURL = &domain.ShortURL{
+		ShortCode:   "test123",
+		OriginalURL: "https://example.com",
+		UserID:      suite.testUser.ID,
+		IsActive:    true,
+	}
+	err = suite.urlRepo.Create(suite.ctx, suite.testURL)
+	suite.Require().NoError(err)
+}
+
+// User Repository Comprehensive Tests
+func (suite *ComprehensiveTestSuite) TestUserRepository_GetUserStats() {
+	// Create additional test data
+	for i := 0; i < 3; i++ {
+		url := &domain.ShortURL{
+			ShortCode:   fmt.Sprintf("short%d", i),
+			OriginalURL: fmt.Sprintf("https://example%d.com", i),
+			UserID:      suite.testUser.ID,
+			IsActive:    true,
+			ClickCount:  int64(i * 10),
+		}
+		err := suite.urlRepo.Create(suite.ctx, url)
+		suite.NoError(err)
+
+		// Create clicks for each URL
+		for j := 0; j < i+1; j++ {
+			click := &domain.Click{
+				ShortURLID: url.ID,
+				IPAddress:  fmt.Sprintf("192.168.1.%d", j),
+				Country:    "US",
+				ClickedAt:  time.Now(),
+			}
+			err = suite.clickRepo.Create(suite.ctx, click)
+			suite.NoError(err)
+		}
+	}
+
+	// Add expired URL
+	expiredTime := time.Now().Add(-time.Hour)
+	expiredURL := &domain.ShortURL{
+		ShortCode:   "expired",
+		OriginalURL: "https://expired.com",
+		UserID:      suite.testUser.ID,
+		IsActive:    true,
+		ExpiresAt:   &expiredTime,
+	}
+	err := suite.urlRepo.Create(suite.ctx, expiredURL)
+	suite.NoError(err)
+
+	stats, err := suite.userRepo.GetUserStats(suite.ctx, suite.testUser.ID)
+	suite.NoError(err)
+	suite.NotNil(stats)
+	suite.Equal(int64(5), stats.TotalURLs) // 1 test + 3 additional + 1 expired
+	suite.Equal(int64(4), stats.ActiveURLs) // All except expired
+	suite.Equal(int64(1), stats.ExpiredURLs)
+	suite.Equal(int64(6), stats.TotalClicks) // 0+1+2+3 clicks
+	suite.Equal("short2", stats.TopPerformingURL) // Highest click count
+	suite.True(stats.AccountAge >= 0)
+}
+
+func (suite *ComprehensiveTestSuite) TestUserRepository_Update_DuplicateEmail() {
+	// Create another user
+	anotherUser := &domain.User{
+		Email:    "another@example.com",
+		Password: "password",
+	}
+	err := suite.userRepo.Create(suite.ctx, anotherUser)
+	suite.NoError(err)
+
+	// Try to update to duplicate email
+	suite.testUser.Email = "another@example.com"
+	err = suite.userRepo.Update(suite.ctx, suite.testUser)
+	suite.Error(err)
+	suite.Equal(domain.ErrUserAlreadyExists, err)
+}
+
+// URL Repository Comprehensive Tests
+func (suite *ComprehensiveTestSuite) TestURLRepository_Delete() {
+	url := &domain.ShortURL{
+		ShortCode:   "todelete",
+		OriginalURL: "https://delete.com",
+		UserID:      suite.testUser.ID,
+		IsActive:    true,
+	}
+	err := suite.urlRepo.Create(suite.ctx, url)
+	suite.NoError(err)
+
+	// Delete the URL
+	err = suite.urlRepo.Delete(suite.ctx, url.ID)
+	suite.NoError(err)
+
+	// Try to get deleted URL
+	_, err = suite.urlRepo.GetByID(suite.ctx, url.ID)
+	suite.Error(err)
+	suite.Equal(domain.ErrShortURLNotFound, err)
+
+	// Try to delete non-existent URL
+	err = suite.urlRepo.Delete(suite.ctx, 9999)
+	suite.Error(err)
+	suite.Equal(domain.ErrShortURLNotFound, err)
+}
+
+func (suite *ComprehensiveTestSuite) TestURLRepository_ExistsByShortCode() {
+	exists, err := suite.urlRepo.ExistsByShortCode(suite.ctx, suite.testURL.ShortCode)
+	suite.NoError(err)
+	suite.True(exists)
+
+	exists, err = suite.urlRepo.ExistsByShortCode(suite.ctx, "nonexistent")
+	suite.NoError(err)
+	suite.False(exists)
+}
+
+func (suite *ComprehensiveTestSuite) TestURLRepository_GetByUserID() {
+	// Create additional URLs for the user
+	for i := 0; i < 5; i++ {
+		url := &domain.ShortURL{
+			ShortCode:   fmt.Sprintf("user%d", i),
+			OriginalURL: fmt.Sprintf("https://user%d.com", i),
+			UserID:      suite.testUser.ID,
+			IsActive:    true,
+		}
+		err := suite.urlRepo.Create(suite.ctx, url)
+		suite.NoError(err)
+	}
+
+	// Test pagination
+	urls, total, err := suite.urlRepo.GetByUserID(suite.ctx, suite.testUser.ID, 0, 3)
+	suite.NoError(err)
+	suite.Equal(int64(6), total) // 1 test + 5 additional
+	suite.Len(urls, 3)
+
+	// Test offset
+	urls, total, err = suite.urlRepo.GetByUserID(suite.ctx, suite.testUser.ID, 3, 3)
+	suite.NoError(err)
+	suite.Equal(int64(6), total)
+	suite.Len(urls, 3)
+}
+
+func (suite *ComprehensiveTestSuite) TestURLRepository_GetTotalURLs() {
+	count, err := suite.urlRepo.GetTotalURLs(suite.ctx)
+	suite.NoError(err)
+	suite.Equal(int64(1), count) // Just the test URL
+}
+
+func (suite *ComprehensiveTestSuite) TestURLRepository_GetTotalURLsByUser() {
+	// Create URLs for different users
+	anotherUser := &domain.User{
+		Email:    "another@example.com",
+		Password: "password",
+	}
+	err := suite.userRepo.Create(suite.ctx, anotherUser)
+	suite.NoError(err)
+
+	url := &domain.ShortURL{
+		ShortCode:   "another",
+		OriginalURL: "https://another.com",
+		UserID:      anotherUser.ID,
+		IsActive:    true,
+	}
+	err = suite.urlRepo.Create(suite.ctx, url)
+	suite.NoError(err)
+
+	count, err := suite.urlRepo.GetTotalURLsByUser(suite.ctx, suite.testUser.ID)
+	suite.NoError(err)
+	suite.Equal(int64(1), count)
+
+	count, err = suite.urlRepo.GetTotalURLsByUser(suite.ctx, anotherUser.ID)
+	suite.NoError(err)
+	suite.Equal(int64(1), count)
+}
+
+func (suite *ComprehensiveTestSuite) TestURLRepository_GetPopularURLs() {
+	// Create URLs with different click counts
+	for i := 0; i < 5; i++ {
+		url := &domain.ShortURL{
+			ShortCode:   fmt.Sprintf("popular%d", i),
+			OriginalURL: fmt.Sprintf("https://popular%d.com", i),
+			UserID:      suite.testUser.ID,
+			IsActive:    true,
+			ClickCount:  int64(i * 10),
+		}
+		err := suite.urlRepo.Create(suite.ctx, url)
+		suite.NoError(err)
+	}
+
+	popularURLs, err := suite.urlRepo.GetPopularURLs(suite.ctx, 3)
+	suite.NoError(err)
+	suite.Len(popularURLs, 3)
+	// Check they're ordered by click count descending
+	suite.Equal("popular4", popularURLs[0].ShortCode)
+	suite.Equal("popular3", popularURLs[1].ShortCode)
+	suite.Equal("popular2", popularURLs[2].ShortCode)
+}
+
+func (suite *ComprehensiveTestSuite) TestURLRepository_Update_DuplicateShortCode() {
+	// Create another URL
+	anotherURL := &domain.ShortURL{
+		ShortCode:   "another",
+		OriginalURL: "https://another.com",
+		UserID:      suite.testUser.ID,
+		IsActive:    true,
+	}
+	err := suite.urlRepo.Create(suite.ctx, anotherURL)
+	suite.NoError(err)
+
+	// Try to update to duplicate short code
+	suite.testURL.ShortCode = "another"
+	err = suite.urlRepo.Update(suite.ctx, suite.testURL)
+	suite.Error(err)
+	suite.Equal(domain.ErrShortCodeExists, err)
+}
+
+// Click Repository Comprehensive Tests
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetByID() {
+	click := &domain.Click{
+		ShortURLID: suite.testURL.ID,
+		IPAddress:  "192.168.1.1",
+		Country:    "US",
+		ClickedAt:  time.Now(),
+	}
+	err := suite.clickRepo.Create(suite.ctx, click)
+	suite.NoError(err)
+
+	retrievedClick, err := suite.clickRepo.GetByID(suite.ctx, click.ID)
+	suite.NoError(err)
+	suite.Equal(click.IPAddress, retrievedClick.IPAddress)
+
+	// Test non-existent click
+	_, err = suite.clickRepo.GetByID(suite.ctx, 9999)
+	suite.Error(err)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetByShortURLID() {
+	// Create multiple clicks
+	for i := 0; i < 5; i++ {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  fmt.Sprintf("192.168.1.%d", i),
+			Country:    "US",
+			ClickedAt:  time.Now().Add(-time.Duration(i) * time.Hour),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	clicks, total, err := suite.clickRepo.GetByShortURLID(suite.ctx, suite.testURL.ID, 0, 3)
+	suite.NoError(err)
+	suite.Equal(int64(5), total)
+	suite.Len(clicks, 3)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetClickStats() {
+	// Create clicks with various attributes
+	devices := []string{"desktop", "mobile", "tablet"}
+	browsers := []string{"chrome", "firefox", "safari"}
+	countries := []string{"US", "CA", "UK"}
+	referers := []string{"google.com", "facebook.com", "twitter.com"}
+
+	for i := 0; i < 30; i++ {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  fmt.Sprintf("192.168.1.%d", i%256),
+			Country:    countries[i%3],
+			City:       fmt.Sprintf("City%d", i%5),
+			Device:     devices[i%3],
+			Browser:    browsers[i%3],
+			Referer:    referers[i%3],
+			ClickedAt:  time.Now().Add(-time.Duration(i) * time.Hour),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	stats, err := suite.clickRepo.GetClickStats(suite.ctx, suite.testURL.ID, "month")
+	suite.NoError(err)
+	suite.NotNil(stats)
+	suite.Equal(int64(30), stats.TotalClicks)
+	suite.True(stats.UniqueClicks > 0)
+	suite.NotEmpty(stats.ClicksByDate)
+	suite.NotEmpty(stats.ClicksByTime)
+	suite.NotEmpty(stats.TopCountries)
+	suite.NotEmpty(stats.TopDevices)
+	suite.NotEmpty(stats.TopBrowsers)
+	suite.NotEmpty(stats.TopReferers)
+	suite.NotEmpty(stats.RecentClicks)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetGeoStats() {
+	// Create clicks with geographic data
+	for i := 0; i < 20; i++ {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  fmt.Sprintf("192.168.1.%d", i),
+			Country:    fmt.Sprintf("Country%d", i%5),
+			Region:     fmt.Sprintf("Region%d", i%10),
+			City:       fmt.Sprintf("City%d", i%15),
+			ClickedAt:  time.Now(),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	geoStats, err := suite.clickRepo.GetGeoStats(suite.ctx, suite.testURL.ID)
+	suite.NoError(err)
+	suite.NotNil(geoStats)
+	suite.NotEmpty(geoStats.CountryStats)
+	suite.NotEmpty(geoStats.RegionStats)
+	suite.NotEmpty(geoStats.CityStats)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetTimelineStats() {
+	// Create clicks over different time periods
+	for i := 0; i < 48; i++ {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  fmt.Sprintf("192.168.1.%d", i),
+			ClickedAt:  time.Now().Add(-time.Duration(i) * time.Hour),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	// Test different periods
+	periods := []string{"day", "week", "month", "year"}
+	for _, period := range periods {
+		stats, err := suite.clickRepo.GetTimelineStats(suite.ctx, suite.testURL.ID, period)
+		suite.NoError(err)
+		suite.NotNil(stats)
+		suite.Equal(period, stats.Period)
+		suite.NotEmpty(stats.Data)
+	}
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetClicksByDateRange() {
+	// Create clicks over several days
+	for i := 0; i < 10; i++ {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  fmt.Sprintf("192.168.1.%d", i),
+			ClickedAt:  time.Now().Add(-time.Duration(i) * 24 * time.Hour),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	startDate := time.Now().Add(-5 * 24 * time.Hour).Format("2006-01-02")
+	endDate := time.Now().Format("2006-01-02")
+	
+	clicks, err := suite.clickRepo.GetClicksByDateRange(suite.ctx, suite.testURL.ID, startDate, endDate)
+	suite.NoError(err)
+	suite.True(len(clicks) > 0 && len(clicks) <= 6) // 5 days + today
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetTopDevices() {
+	devices := []string{"desktop", "mobile", "tablet", "desktop", "mobile", "desktop"}
+	for _, device := range devices {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  "192.168.1.1",
+			Device:     device,
+			ClickedAt:  time.Now(),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	stats, err := suite.clickRepo.GetTopDevices(suite.ctx, suite.testURL.ID, 10)
+	suite.NoError(err)
+	suite.NotEmpty(stats)
+	suite.Equal("desktop", stats[0].Device)
+	suite.Equal(int64(3), stats[0].Count)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetTopBrowsers() {
+	browsers := []string{"chrome", "firefox", "safari", "chrome", "chrome", "firefox"}
+	for _, browser := range browsers {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  "192.168.1.1",
+			Browser:    browser,
+			ClickedAt:  time.Now(),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	stats, err := suite.clickRepo.GetTopBrowsers(suite.ctx, suite.testURL.ID, 10)
+	suite.NoError(err)
+	suite.NotEmpty(stats)
+	suite.Equal("chrome", stats[0].Browser)
+	suite.Equal(int64(3), stats[0].Count)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetTopReferers() {
+	referers := []string{"google.com", "facebook.com", "google.com", "twitter.com", "google.com"}
+	for _, referer := range referers {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  "192.168.1.1",
+			Referer:    referer,
+			ClickedAt:  time.Now(),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	stats, err := suite.clickRepo.GetTopReferers(suite.ctx, suite.testURL.ID, 10)
+	suite.NoError(err)
+	suite.NotEmpty(stats)
+	suite.Equal("google.com", stats[0].Referer)
+	suite.Equal(int64(3), stats[0].Count)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetRecentClicks() {
+	// Create clicks with different attributes
+	for i := 0; i < 5; i++ {
+		click := &domain.Click{
+			ShortURLID: suite.testURL.ID,
+			IPAddress:  fmt.Sprintf("192.168.1.%d", i),
+			Country:    fmt.Sprintf("Country%d", i),
+			City:       fmt.Sprintf("City%d", i),
+			Device:     "desktop",
+			Browser:    "chrome",
+			Referer:    "google.com",
+			ClickedAt:  time.Now().Add(-time.Duration(i) * time.Minute),
+		}
+		err := suite.clickRepo.Create(suite.ctx, click)
+		suite.NoError(err)
+	}
+
+	recentClicks, err := suite.clickRepo.GetRecentClicks(suite.ctx, suite.testURL.ID, 3)
+	suite.NoError(err)
+	suite.Len(recentClicks, 3)
+	// Verify they're ordered by most recent first
+	suite.Equal("Country0", recentClicks[0].Country)
+}
+
+func (suite *ComprehensiveTestSuite) TestClickRepository_GetUserStats() {
+	// Create URLs and clicks for a user
+	for i := 0; i < 3; i++ {
+		url := &domain.ShortURL{
+			ShortCode:   fmt.Sprintf("userstat%d", i),
+			OriginalURL: fmt.Sprintf("https://userstat%d.com", i),
+			UserID:      suite.testUser.ID,
+			IsActive:    true,
+			ClickCount:  int64(i * 5),
+		}
+		err := suite.urlRepo.Create(suite.ctx, url)
+		suite.NoError(err)
+
+		// Create clicks for each URL
+		for j := 0; j < i+1; j++ {
+			click := &domain.Click{
+				ShortURLID: url.ID,
+				IPAddress:  fmt.Sprintf("192.168.1.%d", j),
+				ClickedAt:  time.Now().Add(-time.Duration(j) * 24 * time.Hour),
+			}
+			err = suite.clickRepo.Create(suite.ctx, click)
+			suite.NoError(err)
+		}
+	}
+
+	userStats, err := suite.clickRepo.GetUserStats(suite.ctx, suite.testUser.ID)
+	suite.NoError(err)
+	suite.NotNil(userStats)
+	suite.Equal(suite.testUser.ID, userStats.UserID)
+	suite.Equal(int64(4), userStats.TotalURLs) // 1 test + 3 additional
+	suite.Equal(int64(6), userStats.TotalClicks) // 1+2+3 clicks
+	suite.NotEmpty(userStats.ClicksByDate)
+	suite.NotEmpty(userStats.TopURLs)
+}
+
+// Error handling tests
+func (suite *ComprehensiveTestSuite) TestClickRepository_Create_Error() {
+	// Test with invalid foreign key
+	click := &domain.Click{
+		ShortURLID: 9999, // Non-existent URL ID
+		IPAddress:  "192.168.1.1",
+		ClickedAt:  time.Now(),
+	}
+	err := suite.clickRepo.Create(suite.ctx, click)
+	suite.Error(err)
+}
+
+func TestComprehensiveTestSuite(t *testing.T) {
+	suite.Run(t, new(ComprehensiveTestSuite))
+}
