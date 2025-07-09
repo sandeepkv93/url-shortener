@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"url-shortener/internal/core/domain"
 )
@@ -118,6 +119,12 @@ type JWTService interface {
 	GenerateRefreshToken(userID uint) (string, error)
 	ValidateAccessToken(token string) (*domain.TokenClaims, error)
 	ValidateRefreshToken(token string) (*domain.TokenClaims, error)
+	GetTokenTTL(tokenType string) time.Duration
+	ExtractTokenFromHeader(authHeader string) (string, error)
+	GetUserIDFromToken(tokenString string) (uint, error)
+	IsTokenExpired(tokenString string) bool
+	GetTokenClaims(tokenString string) (*domain.TokenClaims, error)
+	RevokeToken(tokenString string) error
 }
 
 type ConfigService interface {

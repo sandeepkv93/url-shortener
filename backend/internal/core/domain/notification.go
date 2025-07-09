@@ -5,13 +5,15 @@ import (
 )
 
 type AnalyticsDigest struct {
-	UserID      uint      `json:"user_id"`
-	Period      string    `json:"period"`     // daily, weekly, monthly
-	TotalClicks int64     `json:"total_clicks"`
-	TotalURLs   int64     `json:"total_urls"`
-	TopURLs     []TopURLStat `json:"top_urls"`
-	Summary     string    `json:"summary"`
-	GeneratedAt time.Time `json:"generated_at"`
+	UserID         uint      `json:"user_id"`
+	Period         string    `json:"period"`     // daily, weekly, monthly
+	TotalClicks    int64     `json:"total_clicks"`
+	TotalURLs      int64     `json:"total_urls"`
+	UniqueVisitors int64     `json:"unique_visitors"`
+	TopCountry     string    `json:"top_country"`
+	TopURLs        []TopURLStat `json:"top_urls"`
+	Summary        string    `json:"summary"`
+	GeneratedAt    time.Time `json:"generated_at"`
 }
 
 type ClickAlert struct {
@@ -21,18 +23,22 @@ type ClickAlert struct {
 	OriginalURL string    `json:"original_url"`
 	Threshold   int64     `json:"threshold"`
 	CurrentCount int64    `json:"current_count"`
+	ClickCount  int64     `json:"click_count"`
+	TimePeriod  string    `json:"time_period"`
 	AlertType   string    `json:"alert_type"` // milestone, threshold_exceeded, spike_detected
 	TriggeredAt time.Time `json:"triggered_at"`
 }
 
 type SecurityAlert struct {
 	UserID      uint      `json:"user_id"`
-	AlertType   string    `json:"alert_type"` // suspicious_login, password_changed, account_locked
+	Type        string    `json:"type"`        // suspicious_login, password_changed, account_locked
+	AlertType   string    `json:"alert_type"`  // suspicious_login, password_changed, account_locked
 	Description string    `json:"description"`
 	IPAddress   string    `json:"ip_address"`
 	UserAgent   string    `json:"user_agent"`
 	Location    string    `json:"location"`
 	Severity    string    `json:"severity"` // low, medium, high, critical
+	Timestamp   time.Time `json:"timestamp"`
 	TriggeredAt time.Time `json:"triggered_at"`
 	Action      string    `json:"action,omitempty"` // account_locked, password_reset_required
 }
@@ -71,4 +77,12 @@ type NotificationLog struct {
 	Error       string    `json:"error,omitempty"`
 	SentAt      *time.Time `json:"sent_at"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type EmailStatistics struct {
+	TotalSent     int64     `json:"total_sent"`
+	TotalFailed   int64     `json:"total_failed"`
+	TotalBounced  int64     `json:"total_bounced"`
+	DeliveryRate  float64   `json:"delivery_rate"`
+	LastSent      time.Time `json:"last_sent"`
 }

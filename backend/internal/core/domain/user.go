@@ -96,10 +96,12 @@ type TokenResponse struct {
 }
 
 type TokenClaims struct {
-	UserID uint   `json:"user_id"`
-	Email  string `json:"email"`
-	Exp    int64  `json:"exp"`
-	Iat    int64  `json:"iat"`
+	UserID    uint      `json:"user_id"`
+	Email     string    `json:"email"`
+	Type      string    `json:"type"` // "access" or "refresh"
+	IssuedAt  time.Time `json:"issued_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	JTI       string    `json:"jti"` // JWT ID
 }
 
 type UserStats struct {

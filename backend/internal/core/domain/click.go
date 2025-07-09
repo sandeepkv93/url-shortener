@@ -44,6 +44,30 @@ type CountryStat struct {
 	Count   int64  `json:"count"`
 }
 
+// Additional types for mocks
+type CountryStats struct {
+	Country string `json:"country"`
+	Count   int64  `json:"count"`
+}
+
+type UserClickStats struct {
+	UserID      uint  `json:"user_id"`
+	TotalClicks int64 `json:"total_clicks"`
+	ClicksToday int64 `json:"clicks_today"`
+	ClicksWeek  int64 `json:"clicks_week"`
+	ClicksMonth int64 `json:"clicks_month"`
+}
+
+type HourlyStats struct {
+	Hour   int   `json:"hour"`
+	Clicks int64 `json:"clicks"`
+}
+
+type DailyStats struct {
+	Date   string `json:"date"`
+	Clicks int64  `json:"clicks"`
+}
+
 type DeviceStat struct {
 	Device string `json:"device"`
 	Count  int64  `json:"count"`
