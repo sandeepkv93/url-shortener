@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -347,6 +348,39 @@ func (m *MockJWTService) ValidateRefreshToken(token string) (*domain.TokenClaims
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*domain.TokenClaims), args.Error(1)
+}
+
+func (m *MockJWTService) GetTokenTTL(tokenType string) time.Duration {
+	args := m.Called(tokenType)
+	return args.Get(0).(time.Duration)
+}
+
+func (m *MockJWTService) ExtractTokenFromHeader(authHeader string) (string, error) {
+	args := m.Called(authHeader)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockJWTService) GetUserIDFromToken(tokenString string) (uint, error) {
+	args := m.Called(tokenString)
+	return args.Get(0).(uint), args.Error(1)
+}
+
+func (m *MockJWTService) IsTokenExpired(tokenString string) bool {
+	args := m.Called(tokenString)
+	return args.Bool(0)
+}
+
+func (m *MockJWTService) GetTokenClaims(tokenString string) (*domain.TokenClaims, error) {
+	args := m.Called(tokenString)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.TokenClaims), args.Error(1)
+}
+
+func (m *MockJWTService) RevokeToken(tokenString string) error {
+	args := m.Called(tokenString)
+	return args.Error(0)
 }
 
 type MockUserRepository struct {
