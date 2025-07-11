@@ -31,6 +31,16 @@ export interface ChangePasswordRequest {
   confirmPassword: string
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  newPassword: string
+  confirmPassword: string
+}
+
 export interface UpdateProfileRequest {
   name: string
   email: string

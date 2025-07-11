@@ -5,6 +5,8 @@ import {
   RefreshTokenRequest,
   ChangePasswordRequest,
   UpdateProfileRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   AuthResponse,
   TokenResponse,
   User,
@@ -264,6 +266,22 @@ export const authService = {
           Authorization: `Bearer ${tokens.accessToken}`,
         },
       })
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+    try {
+      await authApi.post('/forgot-password', data)
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  async resetPassword(data: ResetPasswordRequest): Promise<void> {
+    try {
+      await authApi.post('/reset-password', data)
     } catch (error) {
       throw handleApiError(error)
     }
