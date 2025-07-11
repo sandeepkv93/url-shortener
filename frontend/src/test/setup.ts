@@ -37,3 +37,25 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 })
+
+// Mock React Router DOM
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  const React = await import('react')
+  
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    useLocation: () => ({
+      pathname: '/',
+      search: '',
+      hash: '',
+      state: null,
+      key: 'default',
+    }),
+    useParams: () => ({}),
+    useSearchParams: () => [new URLSearchParams(), vi.fn()],
+    Link: ({ children, to, ...props }: any) => React.createElement('a', { href: to, ...props }, children),
+    NavLink: ({ children, to, ...props }: any) => React.createElement('a', { href: to, ...props }, children),
+  }
+})
