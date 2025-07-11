@@ -222,3 +222,7 @@ func (c *Config) IsProduction() bool {
 func (c *Config) GetServerAddress() string {
 	return c.Server.Host + ":" + c.Server.Port
 }
+
+func (c *Config) GetAllowedOrigins() []string {
+	return c.CORS.AllowedOrigins
+}
