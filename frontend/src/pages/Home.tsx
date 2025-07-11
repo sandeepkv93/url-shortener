@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 const Home = () => {
   return (
     <div className="px-4 py-8">
@@ -9,23 +11,31 @@ const Home = () => {
           <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
             Create short, memorable links with powerful analytics and QR code generation.
           </p>
+          <div className="mt-8">
+            <Link
+              to="/demo"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              View Component Demo
+            </Link>
+          </div>
         </div>
 
-        <div className="card max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
           <div className="space-y-4">
             <div>
-              <label htmlFor="url" className="label">
+              <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
                 Enter your long URL
               </label>
               <input
                 type="url"
                 id="url"
                 name="url"
-                className="input"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="https://example.com/very/long/url"
               />
             </div>
-            <button className="btn-primary w-full">
+            <button className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
               Shorten URL
             </button>
           </div>
