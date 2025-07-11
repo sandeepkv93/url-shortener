@@ -13,7 +13,7 @@ import {
 } from '@/types/auth'
 
 // API base configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
 const AUTH_API_URL = `${API_BASE_URL}/api/v1/auth`
 
 // Create axios instance for auth requests
