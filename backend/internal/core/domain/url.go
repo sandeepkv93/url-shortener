@@ -139,12 +139,7 @@ type ClickData struct {
 	OS        string `json:"os"`
 }
 
-type URLStats struct {
-	ShortURL      *ShortURL      `json:"short_url"`
-	ClickStats    *ClickStats    `json:"click_stats"`
-	GeoStats      *GeoStats      `json:"geo_stats"`
-	TimelineStats *TimelineStats `json:"timeline_stats"`
-}
+// URLStats moved to performance.go
 
 type DashboardStats struct {
 	TotalURLs       int64                `json:"total_urls"`
@@ -173,17 +168,9 @@ type URLAnalytics struct {
 	RecentClicks []RecentClickStat     `json:"recent_clicks"`
 }
 
-type URLPerformance struct {
-	ShortURL     *ShortURL `json:"short_url"`
-	TotalClicks  int64     `json:"total_clicks"`
-	UniqueClicks int64     `json:"unique_clicks"`
-	ClickRate    float64   `json:"click_rate"`
-}
+// URLPerformance moved to performance.go
 
-type DeviceStats struct {
-	TopDevices  []DeviceStat  `json:"top_devices"`
-	TopBrowsers []BrowserStat `json:"top_browsers"`
-}
+// DeviceStats moved to performance.go
 
 type ActivityItem struct {
 	Type        string    `json:"type"`

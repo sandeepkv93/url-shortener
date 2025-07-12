@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"compress/gzip"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -22,14 +23,22 @@ type Config struct {
 	AuthMiddleware     *middleware.AuthMiddleware
 	CORSMiddleware     *middleware.CORSMiddleware
 	LoggingMiddleware  *middleware.LoggingMiddleware
+	SecurityMiddleware *middleware.SecurityMiddlewareSuite
 	
 	// Services (for rate limiting)
 	CacheService ports.CacheService
 	
 	// Configuration
-	EnableCORS   bool
-	EnableLogging bool
-	AllowedOrigins []string
+	EnableCORS         bool
+	EnableLogging      bool
+	EnableCompression  bool
+	EnablePerformanceMonitoring bool
+	EnableCacheHeaders bool
+	EnableSecurity     bool
+	EnableHTTPS        bool
+	CompressionLevel   int
+	MaxRequestSize     int64
+	AllowedOrigins     []string
 }
 
 type Router struct {
@@ -49,6 +58,40 @@ func (r *Router) SetupRoutes() http.Handler {
 	r.chi.Use(chimiddleware.Recoverer)
 	r.chi.Use(chimiddleware.RequestID)
 	r.chi.Use(chimiddleware.RealIP)
+	
+	// Security middleware (applied very early for protection)
+	if r.config.EnableSecurity {
+		if r.config.SecurityMiddleware != nil {
+			r.config.SecurityMiddleware.Apply(r.chi)
+		} else {
+			// Use default security middleware if not provided
+			securitySuite := middleware.NewSecurityMiddlewareSuite(r.config.CacheService, r.config.EnableHTTPS)
+			securitySuite.Apply(r.chi)
+		}
+	}
+	
+	// Performance middleware (applied early in the stack)
+	if r.config.EnableCompression {
+		compressionLevel := r.config.CompressionLevel
+		if compressionLevel == 0 {
+			compressionLevel = gzip.DefaultCompression
+		}
+		r.chi.Use(middleware.CompressionMiddleware(compressionLevel))
+	}
+	
+	if r.config.EnablePerformanceMonitoring {
+		r.chi.Use(middleware.PerformanceMonitoringMiddleware())
+	}
+	
+	if r.config.EnableCacheHeaders {
+		r.chi.Use(middleware.CacheHeadersMiddleware())
+		r.chi.Use(middleware.ETagMiddleware())
+	}
+	
+	// Request size limiting
+	if r.config.MaxRequestSize > 0 {
+		r.chi.Use(middleware.RequestSizeLimitMiddleware(r.config.MaxRequestSize))
+	}
 	
 	// CORS middleware
 	if r.config.EnableCORS {
@@ -234,9 +277,16 @@ type RouterBuilder struct {
 func NewRouterBuilder() *RouterBuilder {
 	return &RouterBuilder{
 		config: &Config{
-			EnableCORS:     true,
-			EnableLogging:  true,
-			AllowedOrigins: []string{"*"},
+			EnableCORS:         true,
+			EnableLogging:      true,
+			EnableCompression:  true,
+			EnablePerformanceMonitoring: true,
+			EnableCacheHeaders: true,
+			EnableSecurity:     true,
+			EnableHTTPS:        false, // Default to false, enable in production
+			CompressionLevel:   gzip.DefaultCompression,
+			MaxRequestSize:     10 << 20, // 10MB default
+			AllowedOrigins:     []string{"*"},
 		},
 	}
 }
@@ -289,8 +339,46 @@ func (b *RouterBuilder) WithCORS(enabled bool, origins ...string) *RouterBuilder
 	return b
 }
 
+func (b *RouterBuilder) WithCompression(enabled bool, level int) *RouterBuilder {
+	b.config.EnableCompression = enabled
+	if level > 0 {
+		b.config.CompressionLevel = level
+	}
+	return b
+}
+
+func (b *RouterBuilder) WithPerformanceMonitoring(enabled bool) *RouterBuilder {
+	b.config.EnablePerformanceMonitoring = enabled
+	return b
+}
+
+func (b *RouterBuilder) WithCacheHeaders(enabled bool) *RouterBuilder {
+	b.config.EnableCacheHeaders = enabled
+	return b
+}
+
+func (b *RouterBuilder) WithRequestSizeLimit(maxSize int64) *RouterBuilder {
+	b.config.MaxRequestSize = maxSize
+	return b
+}
+
 func (b *RouterBuilder) WithLogging(enabled bool) *RouterBuilder {
 	b.config.EnableLogging = enabled
+	return b
+}
+
+func (b *RouterBuilder) WithSecurity(enabled bool) *RouterBuilder {
+	b.config.EnableSecurity = enabled
+	return b
+}
+
+func (b *RouterBuilder) WithHTTPS(enabled bool) *RouterBuilder {
+	b.config.EnableHTTPS = enabled
+	return b
+}
+
+func (b *RouterBuilder) WithSecurityMiddleware(middleware *middleware.SecurityMiddlewareSuite) *RouterBuilder {
+	b.config.SecurityMiddleware = middleware
 	return b
 }
 
