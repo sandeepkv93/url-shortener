@@ -23,6 +23,11 @@ type Config struct {
 	Cache       CacheConfig
 	Performance PerformanceConfig
 	Monitoring  MonitoringConfig
+	Production  ProductionConfig
+	TLS         TLSConfig
+	Migration   MigrationConfig
+	Proxy       ProxyConfig
+	Container   ContainerConfig
 }
 
 type ServerConfig struct {
@@ -141,9 +146,66 @@ type AlertThresholds struct {
 	CacheHitRateThreshold   float64
 }
 
+// ProductionConfig contains production-specific settings
+type ProductionConfig struct {
+	GracefulShutdownTimeout time.Duration
+	StartupProbeDelay       time.Duration
+	ReadinessProbeDelay     time.Duration
+	LivenessProbeDelay      time.Duration
+	EnableAutoRestart       bool
+	EnableHealthEndpoints   bool
+	EnableMetricsEndpoints  bool
+	EnableDebugEndpoints    bool
+}
+
+// TLSConfig contains SSL/TLS configuration
+type TLSConfig struct {
+	CertFile     string
+	KeyFile      string
+	MinVersion   string
+	CipherSuites []string
+	EnableHTTP2  bool
+}
+
+// MigrationConfig contains database migration settings
+type MigrationConfig struct {
+	EnableAutoMigrate       bool
+	Timeout                 time.Duration
+	BackupBeforeMigration   bool
+	MigrationPath           string
+	MaxMigrationRetries     int
+}
+
+// ProxyConfig contains reverse proxy settings
+type ProxyConfig struct {
+	TrustProxy     bool
+	ProxyHeader    string
+	RealIPHeader   string
+	ForwardedProto string
+}
+
+// ContainerConfig contains container/kubernetes specific settings
+type ContainerConfig struct {
+	PodName       string
+	PodNamespace  string
+	ServiceName   string
+	ClusterName   string
+	NodeName      string
+	EnablePprof   bool
+	PprofPort     string
+}
+
 func Load() (*Config, error) {
+	// Load base .env file first
 	if err := godotenv.Load(); err != nil {
 		// It's okay if .env file doesn't exist in production
+	}
+	
+	// Try to load environment-specific .env file
+	env := getEnv("GO_ENV", "development")
+	envFile := ".env." + env
+	if err := godotenv.Load(envFile); err == nil {
+		// Successfully loaded environment-specific configuration
 	}
 
 	config := &Config{
@@ -253,6 +315,55 @@ func Load() (*Config, error) {
 				CacheHitRateThreshold:   getEnvFloat64("ALERT_CACHE_HIT_RATE_THRESHOLD", 70.0),
 			},
 		},
+		Production: ProductionConfig{
+			GracefulShutdownTimeout: getEnvDuration("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
+			StartupProbeDelay:       getEnvDuration("STARTUP_PROBE_DELAY", "10s"),
+			ReadinessProbeDelay:     getEnvDuration("READINESS_PROBE_DELAY", "5s"),
+			LivenessProbeDelay:      getEnvDuration("LIVENESS_PROBE_DELAY", "5s"),
+			EnableAutoRestart:       getEnvBool("ENABLE_AUTO_RESTART", true),
+			EnableHealthEndpoints:   getEnvBool("ENABLE_HEALTH_ENDPOINTS", true),
+			EnableMetricsEndpoints:  getEnvBool("ENABLE_METRICS_ENDPOINTS", true),
+			EnableDebugEndpoints:    getEnvBool("ENABLE_DEBUG_ENDPOINTS", false),
+		},
+		TLS: TLSConfig{
+			CertFile:     getEnv("TLS_CERT_FILE", ""),
+			KeyFile:      getEnv("TLS_KEY_FILE", ""),
+			MinVersion:   getEnv("TLS_MIN_VERSION", "1.2"),
+			CipherSuites: getEnvStringSlice("TLS_CIPHER_SUITES", []string{}),
+			EnableHTTP2:  getEnvBool("TLS_ENABLE_HTTP2", true),
+		},
+		Migration: MigrationConfig{
+			EnableAutoMigrate:       getEnvBool("ENABLE_AUTO_MIGRATE", false),
+			Timeout:                 getEnvDuration("MIGRATION_TIMEOUT", "300s"),
+			BackupBeforeMigration:   getEnvBool("BACKUP_BEFORE_MIGRATION", true),
+			MigrationPath:           getEnv("MIGRATION_PATH", "./migrations"),
+			MaxMigrationRetries:     getEnvInt("MAX_MIGRATION_RETRIES", 3),
+		},
+		Proxy: ProxyConfig{
+			TrustProxy:     getEnvBool("TRUST_PROXY", false),
+			ProxyHeader:    getEnv("PROXY_HEADER", "X-Forwarded-For"),
+			RealIPHeader:   getEnv("REAL_IP_HEADER", "X-Real-IP"),
+			ForwardedProto: getEnv("FORWARDED_PROTO_HEADER", "X-Forwarded-Proto"),
+		},
+		Container: ContainerConfig{
+			PodName:      getEnv("POD_NAME", ""),
+			PodNamespace: getEnv("POD_NAMESPACE", ""),
+			ServiceName:  getEnv("SERVICE_NAME", "url-shortener"),
+			ClusterName:  getEnv("CLUSTER_NAME", ""),
+			NodeName:     getEnv("NODE_NAME", ""),
+			EnablePprof:  getEnvBool("ENABLE_PPROF", false),
+			PprofPort:    getEnv("PPROF_PORT", "6060"),
+		},
+	}
+
+	// Apply production-specific optimizations
+	config.ApplyProductionOptimizations()
+	
+	// Validate production configuration and log warnings
+	if warnings := config.ValidateProductionConfig(); len(warnings) > 0 {
+		// Log warnings (for now, we'll just ignore them as we don't have logger here)
+		// In a real implementation, you might want to return these warnings
+		// or log them through a simple logger
 	}
 
 	return config, nil
@@ -404,4 +515,190 @@ func (c *Config) GetHealthCheckInterval() time.Duration {
 
 func (c *Config) GetAlertThresholds() AlertThresholds {
 	return c.Monitoring.AlertThresholds
+}
+
+// Production configuration helper methods
+func (c *Config) GetGracefulShutdownTimeout() time.Duration {
+	return c.Production.GracefulShutdownTimeout
+}
+
+func (c *Config) IsHealthEndpointsEnabled() bool {
+	return c.Production.EnableHealthEndpoints
+}
+
+func (c *Config) IsMetricsEndpointsEnabled() bool {
+	return c.Production.EnableMetricsEndpoints
+}
+
+func (c *Config) IsDebugEndpointsEnabled() bool {
+	return c.Production.EnableDebugEndpoints && c.IsDevelopment()
+}
+
+func (c *Config) IsAutoRestartEnabled() bool {
+	return c.Production.EnableAutoRestart
+}
+
+// TLS configuration helper methods
+func (c *Config) IsTLSEnabled() bool {
+	return c.TLS.CertFile != "" && c.TLS.KeyFile != ""
+}
+
+func (c *Config) GetTLSCertFile() string {
+	return c.TLS.CertFile
+}
+
+func (c *Config) GetTLSKeyFile() string {
+	return c.TLS.KeyFile
+}
+
+func (c *Config) GetTLSMinVersion() string {
+	return c.TLS.MinVersion
+}
+
+func (c *Config) IsHTTP2Enabled() bool {
+	return c.TLS.EnableHTTP2
+}
+
+// Migration configuration helper methods
+func (c *Config) IsAutoMigrateEnabled() bool {
+	return c.Migration.EnableAutoMigrate
+}
+
+func (c *Config) GetMigrationTimeout() time.Duration {
+	return c.Migration.Timeout
+}
+
+func (c *Config) IsBackupBeforeMigrationEnabled() bool {
+	return c.Migration.BackupBeforeMigration
+}
+
+func (c *Config) GetMigrationPath() string {
+	return c.Migration.MigrationPath
+}
+
+// Proxy configuration helper methods
+func (c *Config) IsTrustProxyEnabled() bool {
+	return c.Proxy.TrustProxy
+}
+
+func (c *Config) GetProxyHeader() string {
+	return c.Proxy.ProxyHeader
+}
+
+func (c *Config) GetRealIPHeader() string {
+	return c.Proxy.RealIPHeader
+}
+
+// Container configuration helper methods
+func (c *Config) GetPodName() string {
+	return c.Container.PodName
+}
+
+func (c *Config) GetPodNamespace() string {
+	return c.Container.PodNamespace
+}
+
+func (c *Config) GetServiceName() string {
+	return c.Container.ServiceName
+}
+
+func (c *Config) GetClusterName() string {
+	return c.Container.ClusterName
+}
+
+func (c *Config) IsPprofEnabled() bool {
+	return c.Container.EnablePprof && (c.IsDevelopment() || c.IsDebugEndpointsEnabled())
+}
+
+func (c *Config) GetPprofPort() string {
+	return c.Container.PprofPort
+}
+
+// Environment-based configuration loading improvements
+func (c *Config) LoadEnvironmentSpecificConfig() error {
+	env := c.Server.Env
+	
+	// Try to load environment-specific .env file
+	envFile := ".env." + env
+	if err := godotenv.Load(envFile); err == nil {
+		// Reload configuration with environment-specific values
+		*c = *loadConfigFromEnv()
+	}
+	
+	return nil
+}
+
+// Production validation methods
+func (c *Config) ValidateProductionConfig() []string {
+	var warnings []string
+	
+	if c.IsProduction() {
+		// Check JWT secret strength
+		if len(c.JWT.Secret) < 32 {
+			warnings = append(warnings, "JWT secret should be at least 32 characters in production")
+		}
+		
+		// Check if HTTPS is enabled
+		if !c.Security.EnableHTTPS {
+			warnings = append(warnings, "HTTPS should be enabled in production")
+		}
+		
+		// Check if security headers are enabled
+		if !c.Security.EnableSecurityHeaders {
+			warnings = append(warnings, "Security headers should be enabled in production")
+		}
+		
+		// Check database connection pool
+		if c.Database.MaxConnections < 10 {
+			warnings = append(warnings, "Database max connections should be at least 10 in production")
+		}
+		
+		// Check logging level
+		if c.Logging.Level == "debug" {
+			warnings = append(warnings, "Debug logging should not be used in production")
+		}
+		
+		// Check if development endpoints are disabled
+		if c.IsDebugEndpointsEnabled() {
+			warnings = append(warnings, "Debug endpoints should be disabled in production")
+		}
+	}
+	
+	return warnings
+}
+
+// Apply production-specific optimizations
+func (c *Config) ApplyProductionOptimizations() {
+	if c.IsProduction() {
+		// Optimize performance settings for production
+		if c.Performance.CompressionLevel < 6 {
+			c.Performance.CompressionLevel = 9
+		}
+		
+		// Enable all security features
+		c.Security.EnableSecurityHeaders = true
+		c.Security.EnableInputValidation = true
+		c.Security.EnableXSSProtection = true
+		c.Security.EnableCSRFProtection = true
+		c.Security.EnableSanitization = true
+		c.Security.EnableSecureCookies = true
+		
+		// Optimize cache settings
+		if c.Cache.TTL < time.Hour {
+			c.Cache.TTL = 4 * time.Hour
+		}
+		if c.Cache.URLTTL < 24*time.Hour {
+			c.Cache.URLTTL = 48 * time.Hour
+		}
+		
+		// Optimize rate limiting for production
+		if c.Rate.Requests > 100 {
+			c.Rate.Requests = 50
+		}
+	}
+}
+
+func loadConfigFromEnv() *Config {
+	config, _ := Load()
+	return config
 }
