@@ -18,6 +18,7 @@ type Config struct {
 	URLHandler       *handlers.URLHandler
 	AnalyticsHandler *handlers.AnalyticsHandler
 	QRHandler        *handlers.QRHandler
+	DocsHandler      *handlers.DocsHandler
 	
 	// Middleware
 	AuthMiddleware     *middleware.AuthMiddleware
@@ -120,6 +121,15 @@ func (r *Router) SetupRoutes() http.Handler {
 	
 	// Health check endpoint
 	r.chi.Get("/health", r.healthCheck)
+	
+	// Documentation routes (no auth required)
+	if r.config.DocsHandler != nil {
+		r.chi.Route("/docs", func(docsRouter chi.Router) {
+			docsRouter.Get("/*", r.config.DocsHandler.ServeDocumentation)
+		})
+		r.chi.Get("/api/openapi.yaml", r.config.DocsHandler.GetAPISpec)
+		r.chi.Get("/api/swagger", r.config.DocsHandler.GetSwaggerUI)
+	}
 	
 	// API versioning
 	r.chi.Route("/api/v1", func(apiRouter chi.Router) {
@@ -308,6 +318,11 @@ func (b *RouterBuilder) WithAnalyticsHandler(handler *handlers.AnalyticsHandler)
 
 func (b *RouterBuilder) WithQRHandler(handler *handlers.QRHandler) *RouterBuilder {
 	b.config.QRHandler = handler
+	return b
+}
+
+func (b *RouterBuilder) WithDocsHandler(handler *handlers.DocsHandler) *RouterBuilder {
+	b.config.DocsHandler = handler
 	return b
 }
 

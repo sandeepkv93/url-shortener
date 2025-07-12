@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            font-weight: 300;
+            margin-bottom: 20px;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main-content {
+            padding: 60px 0;
+        }
+
+        .section {
+            background: white;
+            margin: 30px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 30px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .section-header h2 {
+            color: #2c3e50;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .section-content {
+            padding: 30px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .hero-buttons {
+            margin-top: 40px;
+        }
+
+        .hero-buttons .btn {
+            margin: 0 10px;
+            font-size: 1.1em;
+            padding: 15px 30px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .feature h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .feature p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .endpoints-list {
+            list-style: none;
+        }
+
+        .endpoints-list li {
+            background: #f8f9fa;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
+        }
+
+        .method {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post { background: #ffc107; color: #212529; }
+        .method.put { background: #17a2b8; }
+        .method.delete { background: #dc3545; }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 60px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat {
+            text-align: center;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .header p {
+                font-size: 1.1em;
+            }
+            
+            .hero-buttons .btn {
+                display: block;
+                margin: 10px auto;
+                max-width: 250px;
+            }
+            
+            .container {
+                padding: 0 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🔗 URL Shortener API</h1>
+            <p>A comprehensive URL shortening service with analytics, QR code generation, and advanced link management features</p>
+            
+            <div class="hero-buttons">
+                <a href="swagger-ui.html" class="btn">📚 Interactive Documentation</a>
+                <a href="openapi.yaml" class="btn btn-outline">📄 OpenAPI Spec</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <!-- API Overview -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>🚀 API Overview</h2>
+                    <p>Modern REST API with comprehensive URL shortening capabilities</p>
+                </div>
+                <div class="section-content">
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-number">29</div>
+                            <div class="stat-label">API Endpoints</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">6</div>
+                            <div class="stat-label">Feature Categories</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">JWT</div>
+                            <div class="stat-label">Authentication</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">v1.0</div>
+                            <div class="stat-label">API Version</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>✨ Key Features</h2>
+                    <p>Everything you need for professional URL shortening</p>
+                </div>
+                <div class="section-content">
+                    <div class="features-grid">
+                        <div class="feature">
+                            <div class="feature-icon">🔗</div>
+                            <h4>URL Shortening</h4>
+                            <p>Create short, memorable URLs with custom aliases and optional password protection</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">📊</div>
+                            <h4>Analytics</h4>
+                            <p>Comprehensive click tracking with geographic, device, and temporal analytics</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">📱</div>
+                            <h4>QR Codes</h4>
+                            <p>Generate QR codes in multiple formats (PNG, SVG, PDF) with customizable sizes</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">🔐</div>
+                            <h4>Authentication</h4>
+                            <p>Secure JWT-based authentication with access and refresh tokens</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">⚡</div>
+                            <h4>Rate Limiting</h4>
+                            <p>Built-in rate limiting to prevent abuse and ensure fair usage</p>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">🌍</div>
+                            <h4>Global Access</h4>
+                            <p>RESTful API with JSON responses and comprehensive error handling</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Start -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>🚀 Quick Start Guide</h2>
+                    <p>Get started with the URL Shortener API in minutes</p>
+                </div>
+                <div class="section-content">
+                    <div class="grid">
+                        <div class="card">
+                            <h3>1. Register Account</h3>
+                            <p>Create a new user account to get started</p>
+                            <div class="code-block">POST /api/v1/auth/register
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "first_name": "John",
+  "last_name": "Doe"
+}</div>
+                        </div>
+                        <div class="card">
+                            <h3>2. Authenticate</h3>
+                            <p>Login to receive your JWT authentication token</p>
+                            <div class="code-block">POST /api/v1/auth/login
+{
+  "email": "user@example.com",
+  "password": "password123"
+}</div>
+                        </div>
+                        <div class="card">
+                            <h3>3. Create Short URL</h3>
+                            <p>Create your first shortened URL</p>
+                            <div class="code-block">POST /api/v1/urls
+Authorization: Bearer &lt;token&gt;
+{
+  "original_url": "https://example.com/long-url",
+  "custom_alias": "my-link"
+}</div>
+                        </div>
+                        <div class="card">
+                            <h3>4. Track Analytics</h3>
+                            <p>Monitor your URL performance</p>
+                            <div class="code-block">GET /api/v1/analytics/urls/{id}
+Authorization: Bearer &lt;token&gt;</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Endpoints -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>📋 API Endpoints</h2>
+                    <p>Complete list of available endpoints organized by category</p>
+                </div>
+                <div class="section-content">
+                    <div class="grid">
+                        <div class="card">
+                            <h3>🔐 Authentication</h3>
+                            <p>User registration, login, and profile management</p>
+                            <ul class="endpoints-list">
+                                <li><span class="method post">POST</span> /auth/register</li>
+                                <li><span class="method post">POST</span> /auth/login</li>
+                                <li><span class="method post">POST</span> /auth/refresh</li>
+                                <li><span class="method post">POST</span> /auth/logout</li>
+                                <li><span class="method get">GET</span> /auth/profile</li>
+                            </ul>
+                            <a href="swagger-ui.html#/Authentication" class="btn">View Details</a>
+                        </div>
+                        <div class="card">
+                            <h3>🔗 URL Management</h3>
+                            <p>Create, update, and manage short URLs</p>
+                            <ul class="endpoints-list">
+                                <li><span class="method post">POST</span> /urls</li>
+                                <li><span class="method get">GET</span> /urls</li>
+                                <li><span class="method get">GET</span> /urls/{id}</li>
+                                <li><span class="method put">PUT</span> /urls/{id}</li>
+                                <li><span class="method delete">DELETE</span> /urls/{id}</li>
+                            </ul>
+                            <a href="swagger-ui.html#/URLs" class="btn">View Details</a>
+                        </div>
+                        <div class="card">
+                            <h3>📊 Analytics</h3>
+                            <p>Comprehensive analytics and reporting</p>
+                            <ul class="endpoints-list">
+                                <li><span class="method get">GET</span> /analytics/dashboard</li>
+                                <li><span class="method get">GET</span> /analytics/urls/{id}</li>
+                                <li><span class="method get">GET</span> /analytics/urls/{id}/timeline</li>
+                                <li><span class="method get">GET</span> /analytics/urls/{id}/geo</li>
+                                <li><span class="method get">GET</span> /analytics/export</li>
+                            </ul>
+                            <a href="swagger-ui.html#/Analytics" class="btn">View Details</a>
+                        </div>
+                        <div class="card">
+                            <h3>📱 QR Codes</h3>
+                            <p>QR code generation and management</p>
+                            <ul class="endpoints-list">
+                                <li><span class="method get">GET</span> /qr/formats</li>
+                                <li><span class="method get">GET</span> /qr/sizes</li>
+                                <li><span class="method post">POST</span> /qr/generate</li>
+                                <li><span class="method get">GET</span> /qr/{shortCode}</li>
+                            </ul>
+                            <a href="swagger-ui.html#/QR%20Codes" class="btn">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation Links -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>📚 Documentation Resources</h2>
+                    <p>Everything you need to integrate with our API</p>
+                </div>
+                <div class="section-content">
+                    <div class="grid">
+                        <div class="card">
+                            <h3>📖 Interactive Documentation</h3>
+                            <p>Explore and test API endpoints with our Swagger UI interface</p>
+                            <a href="swagger-ui.html" class="btn">Open Swagger UI</a>
+                        </div>
+                        <div class="card">
+                            <h3>📄 OpenAPI Specification</h3>
+                            <p>Download the complete OpenAPI 3.0 specification file</p>
+                            <a href="openapi.yaml" class="btn">Download YAML</a>
+                        </div>
+                        <div class="card">
+                            <h3>🔧 Client Libraries</h3>
+                            <p>Generate client libraries for your preferred programming language</p>
+                            <a href="https://editor.swagger.io/" class="btn btn-outline" target="_blank">Generate Clients</a>
+                        </div>
+                        <div class="card">
+                            <h3>🐛 Support</h3>
+                            <p>Need help? Check our GitHub repository for issues and documentation</p>
+                            <a href="#" class="btn btn-outline">GitHub Issues</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rate Limits -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>⚡ Rate Limits</h2>
+                    <p>API usage limits to ensure fair access for all users</p>
+                </div>
+                <div class="section-content">
+                    <div class="grid">
+                        <div class="card">
+                            <h3>🔐 Authentication Endpoints</h3>
+                            <p><strong>5 requests per minute</strong></p>
+                            <p>Login, register, and token refresh endpoints</p>
+                        </div>
+                        <div class="card">
+                            <h3>🔗 URL Creation</h3>
+                            <p><strong>10 requests per minute</strong></p>
+                            <p>Creating new short URLs and QR codes</p>
+                        </div>
+                        <div class="card">
+                            <h3>📊 General Endpoints</h3>
+                            <p><strong>100 requests per minute</strong></p>
+                            <p>Analytics, URL management, and other operations</p>
+                        </div>
+                        <div class="card">
+                            <h3>💡 Rate Limit Headers</h3>
+                            <p>Check response headers for current rate limit status:</p>
+                            <div class="code-block">X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1640995200</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p>&copy; 2024 URL Shortener API. Built with ❤️ for developers.</p>
+            <p>API Version 1.0.0 | <a href="swagger-ui.html" style="color: #64b5f6;">Interactive Documentation</a> | <a href="openapi.yaml" style="color: #64b5f6;">OpenAPI Spec</a></p>
+        </div>
+    </div>
+</body>
+</html>

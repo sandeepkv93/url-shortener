@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>URL Shortener API Documentation</title>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+  <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5.9.0/favicon-32x32.png" sizes="32x32" />
+  <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5.9.0/favicon-16x16.png" sizes="16x16" />
+  <style>
+    html {
+      box-sizing: border-box;
+      overflow: -moz-scrollbars-vertical;
+      overflow-y: scroll;
+    }
+
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+
+    body {
+      margin:0;
+      background: #fafafa;
+    }
+
+    .swagger-ui .topbar {
+      background-color: #2c3e50;
+    }
+
+    .swagger-ui .topbar .download-url-wrapper .select-label {
+      color: #fff;
+    }
+
+    .swagger-ui .topbar .download-url-wrapper input[type=text] {
+      border: 2px solid #62c462;
+    }
+
+    .swagger-ui .info .title {
+      color: #2c3e50;
+    }
+
+    .custom-header {
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-align: center;
+      margin-bottom: 0;
+    }
+
+    .custom-header h1 {
+      margin: 0;
+      font-size: 2.5em;
+      font-weight: 300;
+    }
+
+    .custom-header p {
+      margin: 10px 0 0 0;
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+
+    .api-info {
+      background: #fff;
+      padding: 20px;
+      margin: 0;
+      border-bottom: 1px solid #e6e6e6;
+    }
+
+    .api-info .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .info-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .info-card h3 {
+      margin: 0 0 10px 0;
+      color: #2c3e50;
+      font-size: 1.1em;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: #666;
+      font-size: 0.9em;
+      line-height: 1.4;
+    }
+
+    .endpoints-summary {
+      background: #fff;
+      padding: 20px;
+      margin: 0;
+      border-bottom: 1px solid #e6e6e6;
+    }
+
+    .endpoints-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .endpoint-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #e9ecef;
+    }
+
+    .endpoint-card h4 {
+      margin: 0 0 5px 0;
+      color: #2c3e50;
+      font-size: 1em;
+    }
+
+    .endpoint-card .count {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .quick-start {
+      background: #f8f9fa;
+      padding: 20px;
+      margin: 0;
+      border-bottom: 1px solid #e6e6e6;
+    }
+
+    .quick-start-content {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .quick-start h3 {
+      margin: 0 0 15px 0;
+      color: #2c3e50;
+    }
+
+    .auth-example {
+      background: #2c3e50;
+      color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+
+    .auth-example code {
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="custom-header">
+    <h1>🔗 URL Shortener API</h1>
+    <p>Comprehensive URL shortening service with analytics and QR code generation</p>
+  </div>
+
+  <div class="api-info">
+    <div class="info-grid">
+      <div class="info-card">
+        <h3>🔐 Authentication</h3>
+        <p>JWT Bearer token authentication with access and refresh tokens. Most endpoints require authentication.</p>
+      </div>
+      <div class="info-card">
+        <h3>⚡ Rate Limiting</h3>
+        <p>Auth: 5/min, URL creation: 10/min, Other: 100/min. Headers include rate limit information.</p>
+      </div>
+      <div class="info-card">
+        <h3>📊 Analytics</h3>
+        <p>Comprehensive click analytics with geographic, device, and temporal data tracking.</p>
+      </div>
+      <div class="info-card">
+        <h3>📱 QR Codes</h3>
+        <p>Generate QR codes in multiple formats (PNG, SVG, PDF) with customizable sizes.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="endpoints-summary">
+    <h3 style="text-align: center; margin: 0 0 20px 0; color: #2c3e50;">API Endpoints Overview</h3>
+    <div class="endpoints-grid">
+      <div class="endpoint-card">
+        <h4>Authentication</h4>
+        <div class="count">8</div>
+      </div>
+      <div class="endpoint-card">
+        <h4>URL Management</h4>
+        <div class="count">5</div>
+      </div>
+      <div class="endpoint-card">
+        <h4>Analytics</h4>
+        <div class="count">8</div>
+      </div>
+      <div class="endpoint-card">
+        <h4>QR Codes</h4>
+        <div class="count">6</div>
+      </div>
+      <div class="endpoint-card">
+        <h4>Redirection</h4>
+        <div class="count">1</div>
+      </div>
+      <div class="endpoint-card">
+        <h4>Admin</h4>
+        <div class="count">1</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-start">
+    <div class="quick-start-content">
+      <h3>🚀 Quick Start</h3>
+      <p><strong>1. Register a new account:</strong></p>
+      <div class="auth-example">
+        <code>POST /api/v1/auth/register
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "first_name": "John",
+  "last_name": "Doe"
+}</code>
+      </div>
+      
+      <p><strong>2. Login to get JWT token:</strong></p>
+      <div class="auth-example">
+        <code>POST /api/v1/auth/login
+{
+  "email": "user@example.com",
+  "password": "password123"
+}</code>
+      </div>
+      
+      <p><strong>3. Create a short URL:</strong></p>
+      <div class="auth-example">
+        <code>POST /api/v1/urls
+Authorization: Bearer &lt;your-jwt-token&gt;
+{
+  "original_url": "https://www.example.com/very/long/url",
+  "custom_alias": "my-link"
+}</code>
+      </div>
+
+      <p><strong>4. Access your short URL:</strong></p>
+      <div class="auth-example">
+        <code>GET /{shortCode}  →  Redirects to original URL</code>
+      </div>
+    </div>
+  </div>
+
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      // Begin Swagger UI call region
+      const ui = SwaggerUIBundle({
+        url: './openapi.yaml',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout",
+        tryItOutEnabled: true,
+        filter: true,
+        supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+        docExpansion: 'list',
+        defaultModelsExpandDepth: 2,
+        defaultModelExpandDepth: 2,
+        showExtensions: true,
+        showCommonExtensions: true,
+        requestInterceptor: function(request) {
+          // Add any custom request headers here
+          console.log('Request:', request);
+          return request;
+        },
+        responseInterceptor: function(response) {
+          // Handle responses here
+          console.log('Response:', response);
+          return response;
+        },
+        onComplete: function() {
+          console.log('Swagger UI loaded successfully');
+        },
+        onFailure: function(data) {
+          console.log('Failed to load Swagger UI', data);
+        },
+        validatorUrl: null, // Disable validator
+        oauth2RedirectUrl: window.location.origin + '/docs/oauth2-redirect.html'
+      })
+      // End Swagger UI call region
+
+      window.ui = ui;
+    }
+  </script>
+</body>
+</html>

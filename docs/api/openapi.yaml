@@ -1,0 +1,1742 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener API
+  description: |
+    A comprehensive URL shortener service with analytics, QR code generation, and advanced link management features.
+    
+    ## Authentication
+    This API uses JWT Bearer token authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## Rate Limiting
+    - Authentication endpoints: 5 requests per minute
+    - URL creation: 10 requests per minute
+    - Other endpoints: 100 requests per minute
+    
+    ## Features
+    - URL shortening with custom aliases
+    - Password protection for URLs
+    - URL expiration dates
+    - Comprehensive analytics and reporting
+    - QR code generation
+    - Geographic click tracking
+    - Device and browser analytics
+    
+  version: 1.0.0
+  contact:
+    name: URL Shortener API Support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://api.urlshortener.com/api/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Health Check
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check endpoint
+      description: Check the health status of the API service
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      description: Create a new user account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate user and receive JWT tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh JWT token
+      description: Get a new access token using refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+                  description: Valid refresh token
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      description: Invalidate user session and tokens
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/profile:
+    get:
+      tags: [Authentication]
+      summary: Get user profile
+      description: Retrieve current user profile information
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags: [Authentication]
+      summary: Update user profile
+      description: Update current user profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/change-password:
+    post:
+      tags: [Authentication]
+      summary: Change user password
+      description: Change the current user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/validate:
+    get:
+      tags: [Authentication]
+      summary: Validate JWT token
+      description: Validate the current JWT token
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # URL Management Endpoints
+  /urls:
+    get:
+      tags: [URLs]
+      summary: Get user URLs
+      description: Retrieve paginated list of user's short URLs with filtering options
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: status
+          in: query
+          description: Filter by URL status
+          schema:
+            type: string
+            enum: [active, expired, inactive]
+        - name: search
+          in: query
+          description: Search in URL or title
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [created_at, click_count, expires_at]
+            default: created_at
+        - name: sort_order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: URLs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortURLListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [URLs]
+      summary: Create short URL
+      description: Create a new short URL with optional customization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShortURLRequest'
+      responses:
+        '201':
+          description: Short URL created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortURLResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
+  /urls/popular:
+    get:
+      tags: [URLs]
+      summary: Get popular URLs
+      description: Retrieve list of popular public URLs
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of URLs to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Popular URLs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PopularURLResponse'
+
+  /urls/{id}:
+    get:
+      tags: [URLs]
+      summary: Get specific URL
+      description: Retrieve details of a specific short URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: URL retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortURLResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [URLs]
+      summary: Update URL
+      description: Update an existing short URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShortURLRequest'
+      responses:
+        '200':
+          description: URL updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortURLResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [URLs]
+      summary: Delete URL
+      description: Delete a short URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: URL deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # URL Redirection (Root level)
+  /{shortCode}:
+    get:
+      tags: [Redirection]
+      summary: Redirect to original URL
+      description: Redirect to the original URL and record click analytics
+      security: []
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          description: The short code for the URL
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: Password for protected URLs
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to original URL
+          headers:
+            Location:
+              description: Original URL
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: URL has expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Analytics Endpoints
+  /analytics/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Get user dashboard
+      description: Retrieve user's analytics dashboard data
+      parameters:
+        - name: period
+          in: query
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: week
+      responses:
+        '200':
+          description: Dashboard data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analytics/global:
+    get:
+      tags: [Analytics]
+      summary: Get global statistics
+      description: Retrieve global platform statistics
+      responses:
+        '200':
+          description: Global stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analytics/top-urls:
+    get:
+      tags: [Analytics]
+      summary: Get top performing URLs
+      description: Retrieve user's top performing URLs
+      parameters:
+        - name: limit
+          in: query
+          description: Number of URLs to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: period
+          in: query
+          description: Time period for analysis
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: Top URLs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopURLStat'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analytics/export:
+    get:
+      tags: [Analytics]
+      summary: Export analytics data
+      description: Export analytics data in various formats
+      parameters:
+        - name: format
+          in: query
+          description: Export format
+          schema:
+            type: string
+            enum: [csv, json, pdf]
+            default: csv
+        - name: period
+          in: query
+          description: Time period for export
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: Analytics data exported successfully
+          content:
+            application/csv:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsExport'
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analytics/urls/{id}:
+    get:
+      tags: [Analytics]
+      summary: Get URL analytics
+      description: Retrieve detailed analytics for a specific URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+        - name: period
+          in: query
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: URL analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URLAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/urls/{id}/timeline:
+    get:
+      tags: [Analytics]
+      summary: Get click timeline
+      description: Retrieve click timeline for a specific URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+        - name: granularity
+          in: query
+          description: Timeline granularity
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+        - name: period
+          in: query
+          description: Time period
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: Timeline retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/urls/{id}/geo:
+    get:
+      tags: [Analytics]
+      summary: Get geographic statistics
+      description: Retrieve geographic analytics for a specific URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+        - name: level
+          in: query
+          description: Geographic detail level
+          schema:
+            type: string
+            enum: [country, region, city]
+            default: country
+      responses:
+        '200':
+          description: Geographic stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/urls/{id}/devices:
+    get:
+      tags: [Analytics]
+      summary: Get device statistics
+      description: Retrieve device and browser analytics for a specific URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Device stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/urls/{id}/referrers:
+    get:
+      tags: [Analytics]
+      summary: Get referrer statistics
+      description: Retrieve referrer analytics for a specific URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Referrer stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RefererStat'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # QR Code Endpoints
+  /qr/formats:
+    get:
+      tags: [QR Codes]
+      summary: Get QR code formats
+      description: Retrieve available QR code formats
+      security: []
+      responses:
+        '200':
+          description: Formats retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  enum: [png, svg, pdf, jpeg]
+
+  /qr/sizes:
+    get:
+      tags: [QR Codes]
+      summary: Get QR code sizes
+      description: Retrieve available QR code sizes
+      security: []
+      responses:
+        '200':
+          description: Sizes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  example: [100, 200, 300, 400, 500]
+
+  /qr/validate:
+    post:
+      tags: [QR Codes]
+      summary: Validate QR code options
+      description: Validate QR code generation options
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRValidationRequest'
+      responses:
+        '200':
+          description: Options are valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /qr/preview:
+    post:
+      tags: [QR Codes]
+      summary: Get QR code preview
+      description: Generate a preview of QR code without saving
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRPreviewRequest'
+      responses:
+        '200':
+          description: Preview generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRPreviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /qr/generate:
+    post:
+      tags: [QR Codes]
+      summary: Generate QR code
+      description: Generate and optionally save QR code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRGenerateRequest'
+      responses:
+        '200':
+          description: QR code generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRCodeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /qr/{shortCode}:
+    get:
+      tags: [QR Codes]
+      summary: Generate QR code for URL
+      description: Generate QR code for an existing short URL
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          description: Short code of the URL
+          schema:
+            type: string
+        - name: format
+          in: query
+          description: QR code format
+          schema:
+            type: string
+            enum: [png, svg, pdf, jpeg]
+            default: png
+        - name: size
+          in: query
+          description: QR code size in pixels
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 1000
+            default: 300
+      responses:
+        '200':
+          description: QR code generated successfully
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/svg+xml:
+              schema:
+                type: string
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Admin Endpoints
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Get admin statistics
+      description: Retrieve administrative statistics (admin only)
+      responses:
+        '200':
+          description: Admin stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for API authentication
+
+  schemas:
+    # Request Schemas
+    RegisterRequest:
+      type: object
+      required: [email, password, first_name, last_name]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          example: password123
+        first_name:
+          type: string
+          maxLength: 50
+          example: John
+        last_name:
+          type: string
+          maxLength: 50
+          example: Doe
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          example: password123
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 50
+          example: John
+        last_name:
+          type: string
+          maxLength: 50
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: newemail@example.com
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          example: oldpassword123
+        new_password:
+          type: string
+          minLength: 8
+          example: newpassword123
+
+    CreateShortURLRequest:
+      type: object
+      required: [original_url]
+      properties:
+        original_url:
+          type: string
+          format: url
+          example: https://www.example.com/very/long/url
+        custom_alias:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+          maxLength: 50
+          example: my-custom-link
+        title:
+          type: string
+          maxLength: 255
+          example: My Important Link
+        description:
+          type: string
+          maxLength: 1000
+          example: This is a link to an important resource
+        password:
+          type: string
+          minLength: 4
+          example: secret123
+        expires_at:
+          type: string
+          format: date-time
+          example: 2024-12-31T23:59:59Z
+
+    UpdateShortURLRequest:
+      type: object
+      properties:
+        original_url:
+          type: string
+          format: url
+          example: https://www.example.com/updated/url
+        title:
+          type: string
+          maxLength: 255
+          example: Updated Title
+        description:
+          type: string
+          maxLength: 1000
+          example: Updated description
+        is_active:
+          type: boolean
+          example: true
+        expires_at:
+          type: string
+          format: date-time
+          example: 2024-12-31T23:59:59Z
+
+    QRValidationRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+          example: https://short.ly/abc123
+        format:
+          type: string
+          enum: [png, svg, pdf, jpeg]
+          default: png
+        size:
+          type: integer
+          minimum: 100
+          maximum: 1000
+          default: 300
+
+    QRPreviewRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+          example: https://short.ly/abc123
+        format:
+          type: string
+          enum: [png, svg, pdf, jpeg]
+          default: png
+        size:
+          type: integer
+          minimum: 100
+          maximum: 1000
+          default: 300
+
+    QRGenerateRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: url
+          example: https://short.ly/abc123
+        format:
+          type: string
+          enum: [png, svg, pdf, jpeg]
+          default: png
+        size:
+          type: integer
+          minimum: 100
+          maximum: 1000
+          default: 300
+
+    # Response Schemas
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: url-shortener
+        version:
+          type: string
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          example: 3600
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expires_in:
+          type: integer
+          format: int64
+          example: 3600
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expires_in:
+          type: integer
+          format: int64
+          example: 3600
+
+    TokenValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          example: true
+        user_id:
+          type: integer
+          example: 123
+        expires_at:
+          type: string
+          format: date-time
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        first_name:
+          type: string
+          example: John
+        last_name:
+          type: string
+          example: Doe
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+
+    ShortURLResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 456
+        short_code:
+          type: string
+          example: abc123
+        original_url:
+          type: string
+          format: url
+          example: https://www.example.com/very/long/url
+        short_url:
+          type: string
+          format: url
+          example: https://short.ly/abc123
+        title:
+          type: string
+          example: My Important Link
+        description:
+          type: string
+          example: This is a link to an important resource
+        custom_alias:
+          type: boolean
+          example: false
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+          example: true
+        click_count:
+          type: integer
+          format: int64
+          example: 42
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ShortURLListResponse:
+      type: object
+      properties:
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShortURLResponse'
+        total:
+          type: integer
+          format: int64
+          example: 100
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 10
+        total_pages:
+          type: integer
+          example: 10
+
+    PopularURLResponse:
+      type: object
+      properties:
+        short_code:
+          type: string
+          example: popular123
+        original_url:
+          type: string
+          format: url
+          example: https://www.example.com
+        short_url:
+          type: string
+          format: url
+          example: https://short.ly/popular123
+        click_count:
+          type: integer
+          format: int64
+          example: 1000
+        created_at:
+          type: string
+          format: date-time
+
+    DashboardStats:
+      type: object
+      properties:
+        total_urls:
+          type: integer
+          format: int64
+          example: 25
+        active_urls:
+          type: integer
+          format: int64
+          example: 20
+        total_clicks:
+          type: integer
+          format: int64
+          example: 1500
+        click_growth_rate:
+          type: number
+          format: float
+          example: 15.5
+        url_growth_rate:
+          type: number
+          format: float
+          example: 8.2
+        clicks_by_date:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          example:
+            '2024-01-01': 100
+            '2024-01-02': 150
+        top_urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopURLStat'
+        recent_activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+
+    GlobalStats:
+      type: object
+      properties:
+        total_urls:
+          type: integer
+          format: int64
+          example: 10000
+        total_clicks:
+          type: integer
+          format: int64
+          example: 500000
+        total_users:
+          type: integer
+          format: int64
+          example: 1000
+        active_urls:
+          type: integer
+          format: int64
+          example: 8500
+        clicks_today:
+          type: integer
+          format: int64
+          example: 2500
+        urls_created_today:
+          type: integer
+          format: int64
+          example: 100
+        new_users_today:
+          type: integer
+          format: int64
+          example: 10
+
+    URLAnalytics:
+      type: object
+      properties:
+        short_url_id:
+          type: integer
+          example: 456
+        short_code:
+          type: string
+          example: abc123
+        total_clicks:
+          type: integer
+          format: int64
+          example: 500
+        unique_clicks:
+          type: integer
+          format: int64
+          example: 350
+        clicks_by_date:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          example:
+            '2024-01-01': 25
+            '2024-01-02': 30
+        clicks_by_time:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          example:
+            '9': 10
+            '10': 15
+            '14': 25
+        country_stats:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          example:
+            'US': 200
+            'CA': 150
+            'GB': 100
+        region_stats:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        city_stats:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        top_devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStat'
+        top_browsers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BrowserStat'
+        top_referers:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefererStat'
+        recent_clicks:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentClickStat'
+
+    TopURLStat:
+      type: object
+      properties:
+        short_code:
+          type: string
+          example: abc123
+        original_url:
+          type: string
+          format: url
+          example: https://www.example.com
+        click_count:
+          type: integer
+          format: int64
+          example: 500
+
+    ActivityItem:
+      type: object
+      properties:
+        type:
+          type: string
+          example: url_created
+        description:
+          type: string
+          example: Created new short URL
+        timestamp:
+          type: string
+          format: date-time
+
+    TimelineStats:
+      type: object
+      properties:
+        period:
+          type: string
+          example: day
+        data:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          example:
+            '2024-01-01': 25
+            '2024-01-02': 30
+
+    GeoStats:
+      type: object
+      properties:
+        country_stats:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+          example:
+            'US': 200
+            'CA': 150
+        region_stats:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        city_stats:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+
+    DeviceStats:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStat'
+        browsers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BrowserStat'
+        operating_systems:
+          type: array
+          items:
+            type: object
+            properties:
+              os:
+                type: string
+                example: Windows
+              count:
+                type: integer
+                format: int64
+                example: 150
+
+    DeviceStat:
+      type: object
+      properties:
+        device:
+          type: string
+          example: Desktop
+        count:
+          type: integer
+          format: int64
+          example: 300
+
+    BrowserStat:
+      type: object
+      properties:
+        browser:
+          type: string
+          example: Chrome
+        count:
+          type: integer
+          format: int64
+          example: 250
+
+    RefererStat:
+      type: object
+      properties:
+        referer:
+          type: string
+          example: google.com
+        count:
+          type: integer
+          format: int64
+          example: 100
+
+    RecentClickStat:
+      type: object
+      properties:
+        country:
+          type: string
+          example: US
+        city:
+          type: string
+          example: New York
+        device:
+          type: string
+          example: Desktop
+        browser:
+          type: string
+          example: Chrome
+        referer:
+          type: string
+          example: google.com
+        clicked_at:
+          type: string
+          format: date-time
+
+    AnalyticsExport:
+      type: object
+      properties:
+        format:
+          type: string
+          example: csv
+        data:
+          type: string
+          format: binary
+        generated_at:
+          type: string
+          format: date-time
+
+    QRPreviewResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          format: byte
+          description: Base64 encoded QR code image
+        format:
+          type: string
+          example: png
+        size:
+          type: integer
+          example: 300
+
+    QRCodeResponse:
+      type: object
+      properties:
+        qr_code:
+          type: string
+          format: byte
+          description: Base64 encoded QR code image
+        download_url:
+          type: string
+          format: url
+          example: https://api.urlshortener.com/downloads/qr/abc123.png
+        format:
+          type: string
+          example: png
+        size:
+          type: integer
+          example: 300
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Operation completed successfully
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Resource not found
+        message:
+          type: string
+          example: The requested resource could not be found
+        code:
+          type: integer
+          example: 404
+        timestamp:
+          type: string
+          format: date-time
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Validation failed
+        message:
+          type: string
+          example: Request validation failed
+        code:
+          type: integer
+          example: 422
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: Invalid email format
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Unauthorized
+            message: Valid authentication token required
+            code: 401
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Forbidden
+            message: You don't have permission to access this resource
+            code: 403
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Not Found
+            message: The requested resource could not be found
+            code: 404
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Conflict
+            message: Resource already exists
+            code: 409
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+    RateLimit:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Rate Limit Exceeded
+            message: Too many requests. Please try again later
+            code: 429
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema:
+            type: integer
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: URLs
+    description: URL shortening and management
+  - name: Redirection
+    description: URL redirection and click tracking
+  - name: Analytics
+    description: Analytics and reporting
+  - name: QR Codes
+    description: QR code generation and management
+  - name: Admin
+    description: Administrative endpoints
