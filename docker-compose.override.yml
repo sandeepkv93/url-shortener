@@ -1,0 +1,177 @@
+# Docker Compose Override for Development
+# This file automatically extends docker-compose.yml for development environment
+# Use docker-compose.prod.yml for production deployments
+
+version: '3.8'
+
+services:
+  # PostgreSQL - Development Configuration
+  postgres:
+    environment:
+      POSTGRES_DB: urlshortener
+      POSTGRES_USER: urlshortener  
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    # Remove production optimizations for development
+    command: postgres
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis - Development Configuration  
+  redis:
+    command: redis-server --appendonly yes --requirepass redis123
+    environment:
+      REDIS_PASSWORD: redis123
+    ports:
+      - "6379:6379"
+    # Use simpler configuration for development
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # Backend - Development Configuration
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+      args:
+        BUILD_TARGET: development
+    image: urlshortener-backend:development
+    container_name: urlshortener-backend-dev
+    environment:
+      GO_ENV: development
+      PORT: 8080
+      DATABASE_URL: postgres://urlshortener:password123@postgres:5432/urlshortener?sslmode=disable
+      REDIS_URL: redis://:redis123@redis:6379
+      JWT_SECRET: development-jwt-secret-change-in-production
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+      FRONTEND_URL: http://localhost:3000
+      BASE_URL: http://localhost:8080
+      LOG_LEVEL: debug
+      RATE_LIMIT_ENABLED: "false"  # Disable rate limiting in development
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount source code for live reload
+      - ./backend:/app
+      - go_mod_cache:/go/pkg/mod
+    # Remove security restrictions for development
+    security_opt: []
+    read_only: false
+    tmpfs: []
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # Frontend - Development Configuration
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+      args:
+        BUILD_TARGET: development
+    image: urlshortener-frontend:development
+    container_name: urlshortener-frontend-dev
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: http://localhost:8080/api
+      VITE_BASE_URL: http://localhost:8080
+      CHOKIDAR_USEPOLLING: "true"  # For file watching in Docker
+    ports:
+      - "3000:3000"
+      - "5173:5173"  # Vite dev server
+    volumes:
+      # Mount source code for live reload
+      - ./frontend:/app
+      - node_modules:/app/node_modules
+    # Remove security restrictions for development
+    security_opt: []
+    read_only: false
+    tmpfs: []
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+  # Development Tools
+  adminer:
+    image: adminer:latest
+    container_name: urlshortener-adminer-dev
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: nette
+    depends_on:
+      - postgres
+    networks:
+      - urlshortener-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: urlshortener-redis-commander-dev
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:redis123
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin
+    ports:
+      - "8082:8081"
+    depends_on:
+      - redis
+    networks:
+      - urlshortener-network
+
+  # Optional: Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: urlshortener-mailhog-dev
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - urlshortener-network
+    profiles:
+      - mail-testing
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  go_mod_cache:
+    driver: local
+  node_modules:
+    driver: local
+
+networks:
+  urlshortener-network:
+    driver: bridge
+  # Remove production network restrictions
+  backend-network:
+    driver: bridge
+  frontend-network:
+    driver: bridge
+
+# Development-specific profiles
+profiles:
+  tools:
+    - adminer
+    - redis-commander
+  mail-testing:
+    - mailhog
