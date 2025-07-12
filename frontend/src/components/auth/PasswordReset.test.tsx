@@ -13,25 +13,28 @@ vi.mock('@/services/auth', () => ({
   }
 }))
 
-// Mock React Router components
+const mockForgotPassword = vi.mocked(authService.forgotPassword)
+const mockResetPassword = vi.mocked(authService.resetPassword)
+
+// Mock useSearchParams to be used in tests
+const mockUseSearchParams = vi.fn()
+const mockSetSearchParams = vi.fn()
+
+// Override the global React Router mock for this specific test file
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useSearchParams: vi.fn(() => [new URLSearchParams(), vi.fn()]),
+    useSearchParams: () => [mockUseSearchParams(), mockSetSearchParams],
     Link: ({ children, to, ...props }: any) => (
       <a href={to} {...props}>{children}</a>
     )
   }
 })
 
-const mockForgotPassword = vi.mocked(authService.forgotPassword)
-const mockResetPassword = vi.mocked(authService.resetPassword)
-
 const renderPasswordReset = (searchParams = '', props = {}) => {
-  const { useSearchParams } = require('react-router-dom')
   const mockSearchParams = new URLSearchParams(searchParams)
-  useSearchParams.mockReturnValue([mockSearchParams, vi.fn()])
+  mockUseSearchParams.mockReturnValue(mockSearchParams)
   
   return render(
     <BrowserRouter>
@@ -43,6 +46,8 @@ const renderPasswordReset = (searchParams = '', props = {}) => {
 describe('PasswordReset', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseSearchParams.mockClear()
+    mockSetSearchParams.mockClear()
   })
 
   describe('Forgot Password Step', () => {
