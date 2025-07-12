@@ -41,12 +41,61 @@ tasks:
     cmds:
       - go test -coverprofile=coverage.out ./...
       - go tool cover -func=coverage.out | grep total
+      - go tool cover -func=coverage.out
+
+  backend:test:unit:
+    desc: Run backend unit tests only
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go test -v -short ./...
+
+  backend:test:integration:
+    desc: Run backend integration tests
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go test -v -run Integration ./tests/integration/...
+
+  backend:test:watch:
+    desc: Run backend tests in watch mode
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - find . -name "*.go" | entr -c go test -v ./...
 
   backend:lint:
     desc: Lint backend code
     dir: '{{.BACKEND_DIR}}'
     cmds:
       - golangci-lint run
+
+  backend:lint:fix:
+    desc: Lint and fix backend code
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - golangci-lint run --fix
+      - gofmt -s -w .
+      - goimports -w .
+
+  backend:format:
+    desc: Format backend code
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - gofmt -s -w .
+      - goimports -w .
+
+  backend:mod:
+    desc: Download and verify backend dependencies
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go mod download
+      - go mod verify
+      - go mod tidy
+
+  backend:security:
+    desc: Run security scanning on backend
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - gosec ./...
+      - go list -json -m all | nancy sleuth
 
   backend:run:
     desc: Run backend server
@@ -73,17 +122,79 @@ tasks:
     cmds:
       - npm run test:coverage
 
+  frontend:test:unit:
+    desc: Run frontend unit tests only
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run test:unit
+
+  frontend:test:watch:
+    desc: Run frontend tests in watch mode
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run test:watch
+
+  frontend:test:e2e:
+    desc: Run frontend end-to-end tests
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run test:e2e
+
   frontend:lint:
     desc: Lint frontend code
     dir: '{{.FRONTEND_DIR}}'
     cmds:
       - npm run lint
 
+  frontend:lint:fix:
+    desc: Lint and fix frontend code
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run lint:fix
+
+  frontend:format:
+    desc: Format frontend code
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run format
+
+  frontend:typecheck:
+    desc: Run TypeScript type checking
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run typecheck
+
+  frontend:audit:
+    desc: Audit frontend dependencies for vulnerabilities
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm audit
+      - npm audit --audit-level high
+
+  frontend:deps:update:
+    desc: Update frontend dependencies
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm update
+      - npm audit fix
+
   frontend:dev:
     desc: Run frontend in development mode
     dir: '{{.FRONTEND_DIR}}'
     cmds:
       - npm run dev
+
+  frontend:preview:
+    desc: Preview frontend production build
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run preview
+
+  frontend:build:analyze:
+    desc: Analyze frontend bundle size
+    dir: '{{.FRONTEND_DIR}}'
+    cmds:
+      - npm run build:analyze
 
   # Database tasks
   migrate:
@@ -92,11 +203,46 @@ tasks:
     cmds:
       - go run cmd/migrate/main.go
 
+  migrate:up:
+    desc: Run database migrations up
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go run cmd/migrate/main.go up
+
+  migrate:down:
+    desc: Run database migrations down
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go run cmd/migrate/main.go down
+
+  migrate:reset:
+    desc: Reset database (down and up)
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go run cmd/migrate/main.go down
+      - go run cmd/migrate/main.go up
+
   migrate:create:
     desc: Create new migration
     dir: '{{.BACKEND_DIR}}'
     cmds:
       - migrate create -ext sql -dir migrations {{.CLI_ARGS}}
+
+  db:seed:
+    desc: Seed database with test data
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go run cmd/seed/main.go
+
+  db:backup:
+    desc: Backup database
+    cmds:
+      - docker-compose exec postgres pg_dump -U urlshortener urlshortener > backup_$(date +%Y%m%d_%H%M%S).sql
+
+  db:restore:
+    desc: Restore database from backup (requires BACKUP_FILE variable)
+    cmds:
+      - docker-compose exec -T postgres psql -U urlshortener urlshortener < {{.BACKUP_FILE}}
 
   # Docker tasks
   docker:build:
@@ -104,20 +250,76 @@ tasks:
     cmds:
       - docker-compose build
 
+  docker:build:backend:
+    desc: Build backend Docker image
+    cmds:
+      - docker-compose build backend
+
+  docker:build:frontend:
+    desc: Build frontend Docker image
+    cmds:
+      - docker-compose build frontend
+
   docker:up:
     desc: Start all services
     cmds:
       - docker-compose up -d
+
+  docker:up:dev:
+    desc: Start development services only
+    cmds:
+      - docker-compose up -d postgres redis
+
+  docker:up:tools:
+    desc: Start with development tools
+    cmds:
+      - docker-compose --profile tools up -d
 
   docker:down:
     desc: Stop all services
     cmds:
       - docker-compose down
 
+  docker:down:volumes:
+    desc: Stop all services and remove volumes
+    cmds:
+      - docker-compose down -v
+
   docker:logs:
     desc: View logs
     cmds:
       - docker-compose logs -f
+
+  docker:logs:backend:
+    desc: View backend logs
+    cmds:
+      - docker-compose logs -f backend
+
+  docker:logs:frontend:
+    desc: View frontend logs
+    cmds:
+      - docker-compose logs -f frontend
+
+  docker:shell:backend:
+    desc: Access backend container shell
+    cmds:
+      - docker-compose exec backend sh
+
+  docker:shell:frontend:
+    desc: Access frontend container shell
+    cmds:
+      - docker-compose exec frontend sh
+
+  docker:clean:
+    desc: Clean up Docker images and containers
+    cmds:
+      - docker system prune -f
+      - docker volume prune -f
+
+  docker:health:
+    desc: Check health of all containers
+    cmds:
+      - docker-compose ps
 
   # Testing tasks
   test:all:
@@ -126,24 +328,219 @@ tasks:
       - task: backend:test
       - task: frontend:test
 
+  test:unit:
+    desc: Run all unit tests
+    cmds:
+      - task: backend:test:unit
+      - task: frontend:test:unit
+
+  test:integration:
+    desc: Run all integration tests
+    cmds:
+      - task: backend:test:integration
+      - task: frontend:test:e2e
+
   test:coverage:
     desc: Check test coverage for all components
     cmds:
       - task: backend:test:coverage
       - task: frontend:test
 
-  # Development tasks
-  dev:
-    desc: Start development environment
+  test:watch:
+    desc: Run tests in watch mode
     cmds:
-      - docker-compose up -d postgres redis
-      - task: frontend:dev &
-      - task: backend:run
+      - task: backend:test:watch &
+      - task: frontend:test:watch
+
+  # Quality Assurance tasks
+  qa:lint:
+    desc: Run all linting
+    cmds:
+      - task: backend:lint
+      - task: frontend:lint
+
+  qa:lint:fix:
+    desc: Run all linting with auto-fix
+    cmds:
+      - task: backend:lint:fix
+      - task: frontend:lint:fix
+
+  qa:format:
+    desc: Format all code
+    cmds:
+      - task: backend:format
+      - task: frontend:format
+
+  qa:typecheck:
+    desc: Run type checking
+    cmds:
+      - task: frontend:typecheck
+
+  qa:security:
+    desc: Run security scanning
+    cmds:
+      - task: backend:security
+      - task: frontend:audit
+
+  qa:full:
+    desc: Run full quality assurance suite
+    cmds:
+      - task: qa:lint
+      - task: qa:typecheck
+      - task: qa:security
+      - task: test:all
+
+  # Build tasks
+  build:all:
+    desc: Build all components
+    cmds:
+      - task: backend:build
+      - task: frontend:build
+
+  build:production:
+    desc: Build for production
+    cmds:
+      - task: backend:mod
+      - task: frontend:install
+      - task: qa:full
+      - task: build:all
+
+  # Development workflow tasks
+  dev:start:
+    desc: Start complete development environment
+    cmds:
+      - task: setup
+      - task: docker:up:dev
+      - echo "Waiting for services to start..."
+      - sleep 10
+      - task: migrate
+      - echo "Development environment ready!"
+
+  dev:stop:
+    desc: Stop development environment
+    cmds:
+      - task: docker:down
+
+  dev:restart:
+    desc: Restart development environment
+    cmds:
+      - task: dev:stop
+      - task: dev:start
+
+  dev:reset:
+    desc: Reset development environment completely
+    cmds:
+      - task: docker:down:volumes
+      - task: clean
+      - task: dev:start
+
+  dev:logs:
+    desc: View development logs
+    cmds:
+      - task: docker:logs
+
+  # Setup and teardown tasks
+  setup:
+    desc: Set up the development environment
+    cmds:
+      - cp .env.example .env || true
+      - cp {{.BACKEND_DIR}}/.env.example {{.BACKEND_DIR}}/.env || true
+      - cp {{.FRONTEND_DIR}}/.env.example {{.FRONTEND_DIR}}/.env || true
+      - task: frontend:install
+      - task: backend:mod
+
+  setup:ci:
+    desc: Set up CI environment
+    cmds:
+      - task: backend:mod
+      - task: frontend:install
+
+  teardown:
+    desc: Clean up development environment
+    cmds:
+      - task: docker:down:volumes
+      - task: clean
+
+  # Deployment tasks
+  deploy:dev:
+    desc: Deploy to development environment
+    cmds:
+      - task: qa:full
+      - task: docker:build
+      - task: docker:up
+
+  deploy:staging:
+    desc: Deploy to staging environment
+    cmds:
+      - task: build:production
+      - echo "Staging deployment would happen here"
+
+  deploy:production:
+    desc: Deploy to production environment
+    cmds:
+      - task: build:production
+      - echo "Production deployment would happen here"
+
+  # Maintenance tasks
+  deps:update:
+    desc: Update all dependencies
+    cmds:
+      - task: backend:mod
+      - task: frontend:deps:update
+
+  deps:audit:
+    desc: Audit all dependencies
+    cmds:
+      - task: backend:security
+      - task: frontend:audit
+
+  # Utility tasks
+  health:
+    desc: Check health of all services
+    cmds:
+      - task: docker:health
+      - curl -f http://localhost:8080/health || echo "Backend health check failed"
+      - curl -f http://localhost:3000 || echo "Frontend health check failed"
+
+  logs:
+    desc: View all logs
+    cmds:
+      - task: docker:logs
 
   clean:
-    desc: Clean up build artifacts
+    desc: Clean up build artifacts and Docker resources
     cmds:
-      - rm -rf {{.BACKEND_DIR}}/bin
-      - rm -rf {{.FRONTEND_DIR}}/dist
-      - rm -rf {{.FRONTEND_DIR}}/node_modules
-      - docker-compose down -v
+      - rm -rf {{.BACKEND_DIR}}/bin || true
+      - rm -rf {{.FRONTEND_DIR}}/dist || true
+      - rm -rf {{.FRONTEND_DIR}}/node_modules || true
+      - task: docker:clean
+
+  clean:all:
+    desc: Deep clean everything
+    cmds:
+      - task: clean
+      - task: docker:down:volumes
+
+  # Performance tasks
+  perf:backend:
+    desc: Run backend performance tests
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - go test -bench=. -benchmem ./...
+
+  perf:frontend:
+    desc: Analyze frontend bundle performance
+    cmds:
+      - task: frontend:build:analyze
+
+  # Documentation tasks
+  docs:generate:
+    desc: Generate API documentation
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - swag init -g cmd/server/main.go
+
+  docs:serve:
+    desc: Serve documentation
+    cmds:
+      - echo "Documentation available at http://localhost:8080/swagger/"
