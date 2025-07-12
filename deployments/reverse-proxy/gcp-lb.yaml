@@ -1,0 +1,537 @@
+# Google Cloud Load Balancer Configuration for URL Shortener Service
+# This Terraform configuration creates a production-ready Global Load Balancer
+# with SSL termination, health checks, and proper backend services.
+
+# Configure the Google Cloud Provider
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 4.0"
+    }
+  }
+}
+
+# Variables
+variable "project_id" {
+  description = "The GCP project ID"
+  type        = string
+}
+
+variable "region" {
+  description = "The GCP region"
+  type        = string
+  default     = "us-central1"
+}
+
+variable "zone" {
+  description = "The GCP zone"
+  type        = string
+  default     = "us-central1-a"
+}
+
+variable "domain_name" {
+  description = "Domain name for the service"
+  type        = string
+  default     = "yourdomain.com"
+}
+
+variable "ssl_certificate_name" {
+  description = "Name of the SSL certificate"
+  type        = string
+  default     = "url-shortener-ssl-cert"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "production"
+}
+
+# Configure the provider
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Network resources
+resource "google_compute_network" "url_shortener_network" {
+  name                    = "${var.environment}-url-shortener-network"
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "url_shortener_subnet" {
+  name          = "${var.environment}-url-shortener-subnet"
+  ip_cidr_range = "10.0.1.0/24"
+  region        = var.region
+  network       = google_compute_network.url_shortener_network.id
+
+  log_config {
+    aggregation_interval = "INTERVAL_10_MIN"
+    flow_sampling        = 0.5
+    metadata            = "INCLUDE_ALL_METADATA"
+  }
+}
+
+# Firewall rules
+resource "google_compute_firewall" "allow_http_https" {
+  name    = "${var.environment}-allow-http-https"
+  network = google_compute_network.url_shortener_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["url-shortener-backend"]
+}
+
+resource "google_compute_firewall" "allow_backend" {
+  name    = "${var.environment}-allow-backend"
+  network = google_compute_network.url_shortener_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8080"]
+  }
+
+  source_ranges = ["130.211.0.0/22", "35.191.0.0/16"] # Google Cloud health check ranges
+  target_tags   = ["url-shortener-backend"]
+}
+
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "${var.environment}-allow-ssh"
+  network = google_compute_network.url_shortener_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["url-shortener-backend"]
+}
+
+# Instance template for backend servers
+resource "google_compute_instance_template" "url_shortener_template" {
+  name_prefix  = "${var.environment}-url-shortener-template-"
+  machine_type = "e2-medium"
+  region       = var.region
+
+  disk {
+    source_image = "debian-cloud/debian-11"
+    auto_delete  = true
+    boot         = true
+    disk_type    = "pd-ssd"
+    disk_size_gb = 20
+  }
+
+  network_interface {
+    network    = google_compute_network.url_shortener_network.id
+    subnetwork = google_compute_subnetwork.url_shortener_subnet.id
+    
+    access_config {
+      # Ephemeral public IP
+    }
+  }
+
+  tags = ["url-shortener-backend"]
+
+  metadata = {
+    enable-oslogin = "TRUE"
+  }
+
+  metadata_startup_script = <<-EOF
+    #!/bin/bash
+    
+    # Update system
+    apt-get update
+    apt-get install -y docker.io docker-compose
+    
+    # Start Docker
+    systemctl start docker
+    systemctl enable docker
+    
+    # Create application directory
+    mkdir -p /opt/url-shortener
+    cd /opt/url-shortener
+    
+    # Create docker-compose.yml for the application
+    cat > docker-compose.yml << 'DOCKER_EOF'
+version: '3.8'
+services:
+  url-shortener:
+    image: gcr.io/${var.project_id}/url-shortener:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - GO_ENV=production
+      - PORT=8080
+      - HOST=0.0.0.0
+      - TRUST_PROXY=true
+      - ENABLE_HEALTH_ENDPOINTS=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+DOCKER_EOF
+    
+    # Start the application
+    docker-compose up -d
+    
+    # Setup log forwarding to Cloud Logging
+    curl -sSO https://dl.google.com/cloudagents/add-logging-agent-repo.sh
+    bash add-logging-agent-repo.sh
+    apt-get update
+    apt-get install -y google-fluentd
+    
+  EOF
+
+  service_account {
+    scopes = [
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring.write",
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Managed instance group
+resource "google_compute_region_instance_group_manager" "url_shortener_group" {
+  name   = "${var.environment}-url-shortener-group"
+  region = var.region
+
+  base_instance_name = "${var.environment}-url-shortener"
+  target_size        = 2
+
+  version {
+    instance_template = google_compute_instance_template.url_shortener_template.id
+  }
+
+  named_port {
+    name = "http"
+    port = 8080
+  }
+
+  auto_healing_policies {
+    health_check      = google_compute_health_check.url_shortener_health_check.id
+    initial_delay_sec = 300
+  }
+
+  update_policy {
+    type                         = "PROACTIVE"
+    instance_redistribution_type = "PROACTIVE"
+    minimal_action               = "REPLACE"
+    max_surge_fixed              = 2
+    max_unavailable_fixed        = 1
+  }
+}
+
+# Autoscaler
+resource "google_compute_region_autoscaler" "url_shortener_autoscaler" {
+  name   = "${var.environment}-url-shortener-autoscaler"
+  region = var.region
+  target = google_compute_region_instance_group_manager.url_shortener_group.id
+
+  autoscaling_policy {
+    max_replicas    = 10
+    min_replicas    = 2
+    cooldown_period = 60
+
+    cpu_utilization {
+      target = 0.7
+    }
+
+    load_balancing_utilization {
+      target = 0.8
+    }
+  }
+}
+
+# Health check
+resource "google_compute_health_check" "url_shortener_health_check" {
+  name                = "${var.environment}-url-shortener-health-check"
+  check_interval_sec  = 10
+  timeout_sec         = 5
+  healthy_threshold   = 2
+  unhealthy_threshold = 3
+
+  http_health_check {
+    port         = 8080
+    request_path = "/health"
+  }
+
+  log_config {
+    enable = true
+  }
+}
+
+# Backend service
+resource "google_compute_backend_service" "url_shortener_backend" {
+  name                  = "${var.environment}-url-shortener-backend"
+  protocol              = "HTTP"
+  timeout_sec           = 30
+  enable_cdn            = false
+  load_balancing_scheme = "EXTERNAL"
+
+  backend {
+    group           = google_compute_region_instance_group_manager.url_shortener_group.instance_group
+    balancing_mode  = "UTILIZATION"
+    capacity_scaler = 1.0
+  }
+
+  health_checks = [google_compute_health_check.url_shortener_health_check.id]
+
+  # Connection draining
+  connection_draining_timeout_sec = 30
+
+  # Session affinity
+  session_affinity = "NONE"
+
+  # Security policy (Cloud Armor)
+  security_policy = google_compute_security_policy.url_shortener_security_policy.id
+
+  log_config {
+    enable      = true
+    sample_rate = 1.0
+  }
+}
+
+# Cloud Armor security policy
+resource "google_compute_security_policy" "url_shortener_security_policy" {
+  name = "${var.environment}-url-shortener-security-policy"
+
+  # Default rule - allow all
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    description = "Default allow rule"
+  }
+
+  # Rate limiting rule
+  rule {
+    action   = "rate_based_ban"
+    priority = "1000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action  = "deny(429)"
+      enforce_on_key = "IP"
+      rate_limit_threshold {
+        count        = 100
+        interval_sec = 60
+      }
+      ban_duration_sec = 600
+    }
+    description = "Rate limiting rule"
+  }
+
+  # Geographic restriction rule (example)
+  rule {
+    action   = "deny(403)"
+    priority = "2000"
+    match {
+      expr {
+        expression = "origin.region_code == 'CN' || origin.region_code == 'RU'"
+      }
+    }
+    description = "Geographic restriction"
+  }
+
+  # SQL injection protection
+  rule {
+    action   = "deny(403)"
+    priority = "3000"
+    match {
+      expr {
+        expression = "evaluatePreconfiguredExpr('sqli-stable')"
+      }
+    }
+    description = "SQL injection protection"
+  }
+
+  # XSS protection
+  rule {
+    action   = "deny(403)"
+    priority = "3001"
+    match {
+      expr {
+        expression = "evaluatePreconfiguredExpr('xss-stable')"
+      }
+    }
+    description = "XSS protection"
+  }
+}
+
+# URL map
+resource "google_compute_url_map" "url_shortener_url_map" {
+  name            = "${var.environment}-url-shortener-url-map"
+  default_service = google_compute_backend_service.url_shortener_backend.id
+
+  host_rule {
+    hosts        = [var.domain_name, "www.${var.domain_name}"]
+    path_matcher = "allpaths"
+  }
+
+  path_matcher {
+    name            = "allpaths"
+    default_service = google_compute_backend_service.url_shortener_backend.id
+
+    # API paths
+    path_rule {
+      paths   = ["/api/*"]
+      service = google_compute_backend_service.url_shortener_backend.id
+    }
+
+    # Health check paths
+    path_rule {
+      paths   = ["/health", "/healthz", "/ready", "/live"]
+      service = google_compute_backend_service.url_shortener_backend.id
+    }
+
+    # Short URL paths (pattern for short codes)
+    path_rule {
+      paths   = ["/[a-zA-Z0-9]*"]
+      service = google_compute_backend_service.url_shortener_backend.id
+    }
+  }
+}
+
+# SSL certificate (managed)
+resource "google_compute_managed_ssl_certificate" "url_shortener_ssl_cert" {
+  name = var.ssl_certificate_name
+
+  managed {
+    domains = [var.domain_name, "www.${var.domain_name}"]
+  }
+}
+
+# HTTPS proxy
+resource "google_compute_target_https_proxy" "url_shortener_https_proxy" {
+  name    = "${var.environment}-url-shortener-https-proxy"
+  url_map = google_compute_url_map.url_shortener_url_map.id
+  ssl_certificates = [
+    google_compute_managed_ssl_certificate.url_shortener_ssl_cert.id
+  ]
+}
+
+# HTTP proxy (for redirect)
+resource "google_compute_url_map" "url_shortener_http_redirect" {
+  name = "${var.environment}-url-shortener-http-redirect"
+
+  default_url_redirect {
+    https_redirect         = true
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+    strip_query            = false
+  }
+}
+
+resource "google_compute_target_http_proxy" "url_shortener_http_proxy" {
+  name    = "${var.environment}-url-shortener-http-proxy"
+  url_map = google_compute_url_map.url_shortener_http_redirect.id
+}
+
+# Global forwarding rules
+resource "google_compute_global_forwarding_rule" "url_shortener_https_forwarding_rule" {
+  name       = "${var.environment}-url-shortener-https-forwarding-rule"
+  target     = google_compute_target_https_proxy.url_shortener_https_proxy.id
+  port_range = "443"
+  ip_address = google_compute_global_address.url_shortener_ip.address
+}
+
+resource "google_compute_global_forwarding_rule" "url_shortener_http_forwarding_rule" {
+  name       = "${var.environment}-url-shortener-http-forwarding-rule"
+  target     = google_compute_target_http_proxy.url_shortener_http_proxy.id
+  port_range = "80"
+  ip_address = google_compute_global_address.url_shortener_ip.address
+}
+
+# Static IP address
+resource "google_compute_global_address" "url_shortener_ip" {
+  name = "${var.environment}-url-shortener-ip"
+}
+
+# Cloud Monitoring alerts
+resource "google_monitoring_alert_policy" "high_error_rate" {
+  display_name = "${var.environment} URL Shortener - High Error Rate"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "High 5xx error rate"
+
+    condition_threshold {
+      filter          = "resource.type=\"gce_instance\" AND metric.type=\"loadbalancing.googleapis.com/https/request_count\""
+      duration        = "300s"
+      comparison      = "COMPARISON_GT"
+      threshold_value = 10
+
+      aggregations {
+        alignment_period   = "300s"
+        per_series_aligner = "ALIGN_RATE"
+      }
+    }
+  }
+
+  notification_channels = [] # Add your notification channels here
+
+  alert_strategy {
+    auto_close = "1800s"
+  }
+}
+
+resource "google_monitoring_alert_policy" "high_latency" {
+  display_name = "${var.environment} URL Shortener - High Latency"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "High response latency"
+
+    condition_threshold {
+      filter          = "resource.type=\"gce_instance\" AND metric.type=\"loadbalancing.googleapis.com/https/total_latencies\""
+      duration        = "300s"
+      comparison      = "COMPARISON_GT"
+      threshold_value = 1000
+
+      aggregations {
+        alignment_period   = "300s"
+        per_series_aligner = "ALIGN_MEAN"
+      }
+    }
+  }
+
+  notification_channels = []
+}
+
+# Outputs
+output "load_balancer_ip" {
+  description = "IP address of the load balancer"
+  value       = google_compute_global_address.url_shortener_ip.address
+}
+
+output "backend_service_name" {
+  description = "Name of the backend service"
+  value       = google_compute_backend_service.url_shortener_backend.name
+}
+
+output "ssl_certificate_name" {
+  description = "Name of the SSL certificate"
+  value       = google_compute_managed_ssl_certificate.url_shortener_ssl_cert.name
+}
