@@ -19,6 +19,7 @@ type Config struct {
 	AnalyticsHandler *handlers.AnalyticsHandler
 	QRHandler        *handlers.QRHandler
 	DocsHandler      *handlers.DocsHandler
+	HealthHandler    *handlers.HealthHandler
 	
 	// Middleware
 	AuthMiddleware     *middleware.AuthMiddleware
@@ -119,8 +120,13 @@ func (r *Router) SetupRoutes() http.Handler {
 		r.chi.Use(middleware.GlobalRateLimit(r.config.CacheService))
 	}
 	
-	// Health check endpoint
-	r.chi.Get("/health", r.healthCheck)
+	// Health check endpoints
+	if r.config.HealthHandler != nil {
+		r.chi.Mount("/health", r.config.HealthHandler.SetupHealthRoutes())
+	} else {
+		// Fallback simple health check
+		r.chi.Get("/health", r.healthCheck)
+	}
 	
 	// Documentation routes (no auth required)
 	if r.config.DocsHandler != nil {
@@ -323,6 +329,11 @@ func (b *RouterBuilder) WithQRHandler(handler *handlers.QRHandler) *RouterBuilde
 
 func (b *RouterBuilder) WithDocsHandler(handler *handlers.DocsHandler) *RouterBuilder {
 	b.config.DocsHandler = handler
+	return b
+}
+
+func (b *RouterBuilder) WithHealthHandler(handler *handlers.HealthHandler) *RouterBuilder {
+	b.config.HealthHandler = handler
 	return b
 }
 

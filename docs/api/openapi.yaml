@@ -41,12 +41,12 @@ security:
   - BearerAuth: []
 
 paths:
-  # Health Check
+  # Health Check Endpoints
   /health:
     get:
       tags: [Health]
-      summary: Health check endpoint
-      description: Check the health status of the API service
+      summary: Overall health status
+      description: Get comprehensive health status of the service including all components
       security: []
       responses:
         '200':
@@ -54,7 +54,173 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResponse'
+                $ref: '#/components/schemas/HealthStatus'
+        '206':
+          description: Service is degraded but functional
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /health/livez:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: Kubernetes-style liveness probe indicating if the application is running
+      security: []
+      responses:
+        '200':
+          description: Application is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessResponse'
+
+  /health/readyz:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: Kubernetes-style readiness probe indicating if the application is ready to serve traffic
+      security: []
+      responses:
+        '200':
+          description: Application is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: Application is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
+  /health/checks:
+    get:
+      tags: [Health]
+      summary: Detailed health checks
+      description: Get detailed results of all health checks
+      security: []
+      responses:
+        '200':
+          description: All critical checks passed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthChecksResponse'
+        '206':
+          description: Some non-critical checks failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthChecksResponse'
+        '503':
+          description: Critical checks failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthChecksResponse'
+
+  /health/database:
+    get:
+      tags: [Health]
+      summary: Database health
+      description: Get database-specific health information
+      security: []
+      responses:
+        '200':
+          description: Database is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentHealth'
+        '206':
+          description: Database is degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentHealth'
+        '503':
+          description: Database is down
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentHealth'
+
+  /health/cache:
+    get:
+      tags: [Health]
+      summary: Cache health
+      description: Get cache-specific health information
+      security: []
+      responses:
+        '200':
+          description: Cache is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentHealth'
+        '206':
+          description: Cache is degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentHealth'
+        '503':
+          description: Cache is down
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentHealth'
+
+  /health/metrics/system:
+    get:
+      tags: [Health]
+      summary: System metrics
+      description: Get detailed system-level metrics
+      security: []
+      responses:
+        '200':
+          description: System metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemMetrics'
+
+  /health/metrics/application:
+    get:
+      tags: [Health]
+      summary: Application metrics
+      description: Get application-specific metrics
+      security: []
+      responses:
+        '200':
+          description: Application metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationMetrics'
+
+  /health/version:
+    get:
+      tags: [Health]
+      summary: Version information
+      description: Get service version and build information
+      security: []
+      responses:
+        '200':
+          description: Version information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionInfo'
 
   # Authentication Endpoints
   /auth/register:
@@ -1082,8 +1248,234 @@ components:
           default: 300
 
     # Response Schemas
+    # Health Check Schemas
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: healthy
+        version:
+          type: string
+          example: 1.0.0
+        uptime:
+          type: string
+          example: 72h30m15s
+        timestamp:
+          type: string
+          format: date-time
+        components:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComponentHealth'
+        checks:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/HealthCheck'
+
+    ComponentHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [up, degraded, down]
+          example: up
+        message:
+          type: string
+          example: Database is healthy
+        last_checked:
+          type: string
+          format: date-time
+        duration:
+          type: string
+          example: 15ms
+        metadata:
+          type: object
+          additionalProperties: true
+
+    HealthCheck:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Database Connectivity
+        status:
+          type: string
+          enum: [pass, warn, fail]
+          example: pass
+        message:
+          type: string
+          example: Database is accessible
+        critical:
+          type: boolean
+          example: true
+        duration:
+          type: string
+          example: 15ms
+        last_run:
+          type: string
+          format: date-time
+        next_run:
+          type: string
+          format: date-time
+
+    LivenessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [alive]
+          example: alive
+        timestamp:
+          type: string
+          format: date-time
+
+    ReadinessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ready, "not ready"]
+          example: ready
+        timestamp:
+          type: string
+          format: date-time
+
+    HealthChecksResponse:
+      type: object
+      properties:
+        checks:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/HealthCheck'
+        timestamp:
+          type: string
+          format: date-time
+
+    SystemMetrics:
+      type: object
+      properties:
+        cpu:
+          type: object
+          properties:
+            usage:
+              type: number
+              format: float
+              example: 25.5
+            cores:
+              type: integer
+              example: 4
+        memory:
+          type: object
+          properties:
+            total:
+              type: integer
+              format: int64
+              example: 268435456
+            used:
+              type: integer
+              format: int64
+              example: 134217728
+            free:
+              type: integer
+              format: int64
+              example: 134217728
+            available:
+              type: integer
+              format: int64
+              example: 134217728
+            usage_percent:
+              type: number
+              format: float
+              example: 50.0
+        processes:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 25
+            running:
+              type: integer
+              example: 25
+        timestamp:
+          type: string
+          format: date-time
+
+    ApplicationMetrics:
+      type: object
+      properties:
+        goroutine_count:
+          type: integer
+          example: 25
+        heap_size:
+          type: integer
+          format: int64
+          example: 134217728
+        database_connections:
+          $ref: '#/components/schemas/DatabaseMetrics'
+        cache_metrics:
+          $ref: '#/components/schemas/CacheMetrics'
+        timestamp:
+          type: string
+          format: date-time
+
+    DatabaseMetrics:
+      type: object
+      properties:
+        open_connections:
+          type: integer
+          example: 5
+        in_use_connections:
+          type: integer
+          example: 2
+        idle_connections:
+          type: integer
+          example: 3
+        max_open_connections:
+          type: integer
+          example: 25
+
+    CacheMetrics:
+      type: object
+      properties:
+        hits:
+          type: integer
+          format: int64
+          example: 10000
+        misses:
+          type: integer
+          format: int64
+          example: 1000
+        hit_rate:
+          type: number
+          format: float
+          example: 90.9
+
+    VersionInfo:
+      type: object
+      properties:
+        service:
+          type: string
+          example: url-shortener
+        version:
+          type: string
+          example: 1.0.0
+        build_time:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:00:00Z
+        commit:
+          type: string
+          example: abc123def456
+        go_version:
+          type: string
+          example: 1.21
+
     HealthResponse:
       type: object
+      deprecated: true
+      description: Legacy health response schema - use HealthStatus instead
       properties:
         status:
           type: string

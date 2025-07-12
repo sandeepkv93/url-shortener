@@ -102,10 +102,13 @@ type GeolocationService interface {
 
 type HealthService interface {
 	// Health checks
+	GetHealth(ctx context.Context) (*domain.HealthStatus, error)
 	CheckHealth(ctx context.Context) (*domain.HealthStatus, error)
 	CheckDatabaseHealth(ctx context.Context) (*domain.ComponentHealth, error)
 	CheckCacheHealth(ctx context.Context) (*domain.ComponentHealth, error)
 	CheckExternalServices(ctx context.Context) (map[string]*domain.ComponentHealth, error)
+	RunHealthChecks(ctx context.Context) (map[string]*domain.HealthCheck, error)
+	IsHealthy(ctx context.Context) bool
 	
 	// System metrics
 	GetSystemMetrics(ctx context.Context) (*domain.SystemMetrics, error)
