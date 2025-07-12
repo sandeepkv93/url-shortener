@@ -1,82 +1,250 @@
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import URLShortener from '@/components/url/URLShortener'
+import { ShortURL } from '@/types/url'
+import {
+  LinkIcon,
+  BarChart3,
+  QrCode,
+  Shield,
+  Zap,
+  Globe,
+  Users,
+  TrendingUp
+} from 'lucide-react'
 
 const Home = () => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [recentUrls, setRecentUrls] = useState<ShortURL[]>([])
+
+  useEffect(() => {
+    // If user is already logged in, redirect to dashboard
+    if (user) {
+      navigate('/dashboard')
+    }
+  }, [user, navigate])
+
+  const handleURLCreated = (url: ShortURL) => {
+    setRecentUrls(prev => [url, ...prev.slice(0, 2)])
+    
+    // If user is logged in, redirect to dashboard to see the new URL
+    if (user) {
+      navigate('/dashboard')
+    }
+  }
+
   return (
-    <div className="px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl">
-            Shorten Your URLs
-          </h1>
-          <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-            Create short, memorable links with powerful analytics and QR code generation.
-          </p>
-          <div className="mt-8">
-            <Link
-              to="/demo"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              View Component Demo
-            </Link>
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary-50 to-primary-100">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23f97316" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="4"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"></div>
+        <div className="relative px-4 py-16 sm:py-24">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl lg:text-7xl">
+                <span className="block">Shorten Your URLs</span>
+                <span className="block text-primary-600">Track Everything</span>
+              </h1>
+              <p className="mt-6 max-w-3xl mx-auto text-lg text-gray-600 sm:text-xl">
+                Create short, memorable links with powerful analytics, QR code generation, 
+                and comprehensive link management. Perfect for marketers, businesses, and developers.
+              </p>
+              
+              {!user && (
+                <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                  >
+                    Get Started Free
+                  </Link>
+                  <Link
+                    to="/demo"
+                    className="inline-flex items-center px-8 py-3 border border-primary-600 text-base font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                  >
+                    View Demo
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
-          <div className="space-y-4">
+      {/* URL Shortener Section */}
+      <div className="py-16 bg-white">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Try it now - no registration required
+            </h2>
+            <p className="text-lg text-gray-600">
+              Create your first short link and see the magic happen
+            </p>
+          </div>
+          
+          <URLShortener 
+            onURLCreated={handleURLCreated}
+            className="max-w-2xl mx-auto"
+          />
+          
+          {/* Recent URLs for anonymous users */}
+          {!user && recentUrls.length > 0 && (
+            <div className="mt-12 max-w-2xl mx-auto">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">
+                Your Recent Links
+              </h3>
+              <div className="space-y-3">
+                {recentUrls.map((url, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {window.location.origin}/{url.shortCode}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {url.originalUrl}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(`${window.location.origin}/${url.shortCode}`)}
+                      className="ml-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Copy to clipboard"
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Want to manage your links? {' '}
+                  <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
+                    Create a free account
+                  </Link>
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              Everything you need to manage links
+            </h2>
+            <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+              From simple URL shortening to advanced analytics and QR codes, 
+              we've got all the tools you need to succeed.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="text-center p-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-xl bg-primary-100 text-primary-600 mb-6">
+                <Zap className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Lightning Fast</h3>
+              <p className="text-gray-600">
+                Create short links instantly with our optimized infrastructure and global CDN.
+              </p>
+            </div>
+
+            <div className="text-center p-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-xl bg-primary-100 text-primary-600 mb-6">
+                <BarChart3 className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Advanced Analytics</h3>
+              <p className="text-gray-600">
+                Track clicks, geographic data, devices, referrers, and more with real-time insights.
+              </p>
+            </div>
+
+            <div className="text-center p-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-xl bg-primary-100 text-primary-600 mb-6">
+                <QrCode className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">QR Code Generation</h3>
+              <p className="text-gray-600">
+                Generate customizable QR codes for your links with multiple formats and styles.
+              </p>
+            </div>
+
+            <div className="text-center p-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-xl bg-primary-100 text-primary-600 mb-6">
+                <Shield className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Secure & Reliable</h3>
+              <p className="text-gray-600">
+                Enterprise-grade security with password protection, expiration dates, and access controls.
+              </p>
+            </div>
+
+            <div className="text-center p-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-xl bg-primary-100 text-primary-600 mb-6">
+                <Globe className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Global Performance</h3>
+              <p className="text-gray-600">
+                99.9% uptime with worldwide edge locations for the fastest redirect speeds.
+              </p>
+            </div>
+
+            <div className="text-center p-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-xl bg-primary-100 text-primary-600 mb-6">
+                <Users className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Team Collaboration</h3>
+              <p className="text-gray-600">
+                Share links with your team, manage permissions, and collaborate on campaigns.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="py-16 bg-primary-600">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 text-center">
             <div>
-              <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-                Enter your long URL
-              </label>
-              <input
-                type="url"
-                id="url"
-                name="url"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="https://example.com/very/long/url"
-              />
+              <div className="text-4xl font-bold text-white mb-2">10M+</div>
+              <div className="text-primary-100">Links Created</div>
             </div>
-            <button className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
-              Shorten URL
-            </button>
+            <div>
+              <div className="text-4xl font-bold text-white mb-2">500K+</div>
+              <div className="text-primary-100">Active Users</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-white mb-2">99.9%</div>
+              <div className="text-primary-100">Uptime</div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-3">
-          <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-md bg-primary-500 text-white">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            </div>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">Easy Link Shortening</h3>
-            <p className="mt-2 text-base text-gray-500">
-              Transform long URLs into short, shareable links in seconds.
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-md bg-primary-500 text-white">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">Detailed Analytics</h3>
-            <p className="mt-2 text-base text-gray-500">
-              Track clicks, locations, devices, and more with comprehensive analytics.
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-md bg-primary-500 text-white">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-              </svg>
-            </div>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">QR Code Generation</h3>
-            <p className="mt-2 text-base text-gray-500">
-              Generate QR codes for your short links with customizable options.
-            </p>
-          </div>
+      {/* CTA Section */}
+      <div className="py-16 bg-white">
+        <div className="max-w-4xl mx-auto text-center px-4">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Ready to get started?
+          </h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Join thousands of users who trust us with their links
+          </p>
+          {!user && (
+            <Link
+              to="/register"
+              className="inline-flex items-center px-8 py-3 border border-transparent text-lg font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            >
+              Start Free Today
+              <TrendingUp className="ml-2 h-5 w-5" />
+            </Link>
+          )}
         </div>
       </div>
     </div>

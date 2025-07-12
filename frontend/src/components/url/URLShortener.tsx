@@ -20,6 +20,7 @@ import {
 import { urlService } from '@/services/urls'
 import { CreateURLRequest, URL as URLType } from '@/types/url'
 import { ButtonLoading } from '@/components/common/Loading'
+import QRPreview from '@/components/qr/QRPreview'
 
 const urlShortenerSchema = z.object({
   originalUrl: z
@@ -65,6 +66,8 @@ const URLShortener = ({ onURLCreated, className = '' }: URLShortenerProps) => {
   const [createdURL, setCreatedURL] = useState<URLType | null>(null)
   const [currentTag, setCurrentTag] = useState('')
   const [copied, setCopied] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [qrUrl, setQrUrl] = useState('')
 
   const {
     register,
@@ -159,10 +162,9 @@ const URLShortener = ({ onURLCreated, className = '' }: URLShortenerProps) => {
     }
   }
 
-  const generateQRCode = (url: string) => {
-    // In a real implementation, this would generate and download a QR code
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`
-    window.open(qrCodeUrl, '_blank')
+  const showQRCode = (url: string) => {
+    setQrUrl(url)
+    setShowQRModal(true)
   }
 
   const resetForm = () => {
@@ -221,9 +223,9 @@ const URLShortener = ({ onURLCreated, className = '' }: URLShortenerProps) => {
                   <Copy className="h-5 w-5" />
                 </button>
                 <button
-                  onClick={() => generateQRCode(shortUrl)}
+                  onClick={() => showQRCode(shortUrl)}
                   className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
-                  title="Generate QR Code"
+                  title="Show QR Code"
                 >
                   <QrCode className="h-5 w-5" />
                 </button>
@@ -566,6 +568,57 @@ const URLShortener = ({ onURLCreated, className = '' }: URLShortenerProps) => {
           </button>
         </form>
       </div>
+      
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="relative max-w-md w-full mx-4">
+            <div className="bg-white rounded-lg overflow-hidden">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">QR Code</h3>
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Modal Content */}
+              <div className="p-6">
+                <QRPreview 
+                  url={qrUrl}
+                  size={250}
+                  showActions={true}
+                  showUrl={true}
+                  className="border-0 shadow-none"
+                />
+                
+                {/* URL Info */}
+                {createdURL && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                    <div className="text-sm">
+                      <p className="font-medium text-gray-700 mb-1">Short URL:</p>
+                      <p className="text-gray-600 break-all">{qrUrl}</p>
+                    </div>
+                    {createdURL.title && (
+                      <div className="text-sm mt-2">
+                        <p className="font-medium text-gray-700 mb-1">Title:</p>
+                        <p className="text-gray-600">{createdURL.title}</p>
+                      </div>
+                    )}
+                    <div className="text-sm mt-2">
+                      <p className="font-medium text-gray-700 mb-1">Original URL:</p>
+                      <p className="text-gray-600 break-all">{createdURL.originalUrl}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

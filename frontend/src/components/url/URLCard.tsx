@@ -15,11 +15,13 @@ import {
   Users,
   Tag,
   MoreVertical,
-  CheckCircle
+  CheckCircle,
+  X
 } from 'lucide-react'
 import { URL as URLType } from '@/types/url'
 import { urlService } from '@/services/urls'
 import { format } from 'date-fns'
+import QRPreview from '@/components/qr/QRPreview'
 
 interface URLCardProps {
   url: URLType
@@ -39,6 +41,7 @@ const URLCard = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
 
   const shortUrl = `${window.location.origin}/${url.shortCode}`
 
@@ -52,9 +55,8 @@ const URLCard = ({
     }
   }
 
-  const generateQRCode = () => {
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shortUrl)}`
-    window.open(qrCodeUrl, '_blank')
+  const showQRCode = () => {
+    setShowQRModal(true)
   }
 
   const toggleURLStatus = async () => {
@@ -196,9 +198,9 @@ const URLCard = ({
               {copied ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </button>
             <button
-              onClick={generateQRCode}
+              onClick={showQRCode}
               className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
-              title="Generate QR Code"
+              title="Show QR Code"
             >
               <QrCode className="h-4 w-4" />
             </button>
@@ -325,6 +327,55 @@ const URLCard = ({
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="relative max-w-md w-full mx-4">
+            <div className="bg-white rounded-lg overflow-hidden">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">QR Code</h3>
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Modal Content */}
+              <div className="p-6">
+                <QRPreview 
+                  url={shortUrl}
+                  size={250}
+                  showActions={true}
+                  showUrl={true}
+                  className="border-0 shadow-none"
+                />
+                
+                {/* URL Info */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-700 mb-1">Short URL:</p>
+                    <p className="text-gray-600 break-all">{shortUrl}</p>
+                  </div>
+                  {url.title && (
+                    <div className="text-sm mt-2">
+                      <p className="font-medium text-gray-700 mb-1">Title:</p>
+                      <p className="text-gray-600">{url.title}</p>
+                    </div>
+                  )}
+                  <div className="text-sm mt-2">
+                    <p className="font-medium text-gray-700 mb-1">Original URL:</p>
+                    <p className="text-gray-600 break-all">{url.originalUrl}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
