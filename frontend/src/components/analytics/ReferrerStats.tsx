@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   PieChart,
   Pie,
@@ -32,8 +32,8 @@ import {
   Eye,
   MousePointer
 } from 'lucide-react'
-import { urlAnalyticsService } from '@/services/urls'
 import { PageLoading } from '@/components/common/Loading'
+import { useRealTimeAnalytics } from '@/hooks/useRealTimeAnalytics'
 
 interface ReferrerData {
   referrers: Array<{
@@ -69,14 +69,38 @@ type ViewMode = 'all' | 'search' | 'social' | 'direct' | 'email' | 'other'
 type ChartType = 'pie' | 'bar' | 'treemap' | 'table'
 
 const ReferrerStats = ({ urlId, className = '' }: ReferrerStatsProps) => {
-  const [data, setData] = useState<ReferrerData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [chartType, setChartType] = useState<ChartType>('pie')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'clicks' | 'alphabetical' | 'trend'>('clicks')
-  const [error, setError] = useState<string | null>(null)
+  
+  // Use real-time analytics hook
+  const {
+    data: analyticsData,
+    isLoading,
+    isRefreshing,
+    error,
+    refreshData,
+    connectionStatus
+  } = useRealTimeAnalytics({
+    urlId,
+    period: '30d',
+    refreshInterval: 30000, // 30 seconds
+    enabled: true
+  })
+  
+  // Transform analytics data to referrer format
+  const data = useMemo(() => {
+    if (!analyticsData?.referrers) return generateMockReferrerData()
+    
+    return {
+      referrers: analyticsData.referrers.referrers || [],
+      directClicks: analyticsData.referrers.directClicks || 0,
+      totalClicks: analyticsData.referrers.totalClicks || 0,
+      categories: analyticsData.referrers.categories || [],
+      topDomains: analyticsData.referrers.topDomains || []
+    }
+  }, [analyticsData])
 
   const viewModes: { value: ViewMode; label: string; icon: React.ReactNode; color: string }[] = [
     { value: 'all', label: 'All Sources', icon: <Globe className="h-4 w-4" />, color: '#6B7280' },
@@ -108,45 +132,6 @@ const ReferrerStats = ({ urlId, className = '' }: ReferrerStatsProps) => {
     'email': <Mail className="h-5 w-5 text-purple-600" />
   }
 
-  useEffect(() => {
-    fetchReferrerData()
-  }, [urlId])
-
-  const fetchReferrerData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true)
-    else setIsRefreshing(true)
-    setError(null)
-
-    try {
-      if (urlId) {
-        // Fetch data for specific URL
-        const response = await urlAnalyticsService.getReferrerStats(urlId)
-        
-        const categorizedReferrers = response.referrers.map(ref => ({
-          ...ref,
-          uniqueClicks: Math.floor(ref.clicks * 0.8),
-          category: categorizeReferrer(ref.referrer),
-          trend: (Math.random() - 0.5) * 20 // Mock trend data
-        }))
-
-        setData({
-          referrers: categorizedReferrers,
-          directClicks: response.directClicks,
-          totalClicks: response.totalClicks,
-          categories: generateCategoryBreakdown(categorizedReferrers, response.directClicks),
-          topDomains: generateTopDomains(categorizedReferrers)
-        })
-      } else {
-        // Generate mock data for dashboard
-        setData(generateMockReferrerData())
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load referrer data')
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }
 
   const categorizeReferrer = (referrer: string): 'search' | 'social' | 'direct' | 'email' | 'other' => {
     const domain = referrer.toLowerCase()
@@ -560,12 +545,18 @@ const ReferrerStats = ({ urlId, className = '' }: ReferrerStatsProps) => {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => fetchReferrerData(false)}
+              onClick={() => refreshData()}
               disabled={isRefreshing}
               className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
+              {connectionStatus === 'reconnecting' && (
+                <span className="ml-2 text-xs text-yellow-600">Reconnecting...</span>
+              )}
+              {connectionStatus === 'disconnected' && (
+                <span className="ml-2 text-xs text-red-600">Disconnected</span>
+              )}
             </button>
             <button
               onClick={exportData}

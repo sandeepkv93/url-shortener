@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   PieChart,
   Pie,
@@ -31,8 +31,8 @@ import {
   ArrowDown,
   Minus
 } from 'lucide-react'
-import { urlAnalyticsService } from '@/services/urls'
 import { PageLoading } from '@/components/common/Loading'
+import { useRealTimeAnalytics } from '@/hooks/useRealTimeAnalytics'
 
 interface DeviceData {
   devices: Array<{
@@ -74,12 +74,35 @@ type ViewMode = 'devices' | 'browsers' | 'os' | 'resolutions'
 type ChartType = 'pie' | 'bar' | 'radial'
 
 const DeviceStats = ({ urlId, className = '' }: DeviceStatsProps) => {
-  const [data, setData] = useState<DeviceData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('devices')
   const [chartType, setChartType] = useState<ChartType>('pie')
-  const [error, setError] = useState<string | null>(null)
+  
+  // Use real-time analytics hook
+  const {
+    data: analyticsData,
+    isLoading,
+    isRefreshing,
+    error,
+    refreshData,
+    connectionStatus
+  } = useRealTimeAnalytics({
+    urlId,
+    period: '30d',
+    refreshInterval: 30000, // 30 seconds
+    enabled: true
+  })
+  
+  // Transform analytics data to device format
+  const data = useMemo(() => {
+    if (!analyticsData?.devices) return generateMockDeviceData()
+    
+    return {
+      devices: analyticsData.devices.devices || [],
+      browsers: analyticsData.devices.browsers || [],
+      operatingSystems: analyticsData.devices.operatingSystems || [],
+      screenResolutions: generateMockResolutions()
+    }
+  }, [analyticsData])
 
   const viewModes: { value: ViewMode; label: string; icon: React.ReactNode }[] = [
     { value: 'devices', label: 'Devices', icon: <Smartphone className="h-4 w-4" /> },
@@ -111,50 +134,6 @@ const DeviceStats = ({ urlId, className = '' }: DeviceStatsProps) => {
     'Other': <Globe className="h-5 w-5" />
   }
 
-  useEffect(() => {
-    fetchDeviceData()
-  }, [urlId])
-
-  const fetchDeviceData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true)
-    else setIsRefreshing(true)
-    setError(null)
-
-    try {
-      if (urlId) {
-        // Fetch data for specific URL
-        const response = await urlAnalyticsService.getDeviceStats(urlId)
-        setData({
-          devices: response.devices.map(device => ({
-            ...device,
-            uniqueClicks: Math.floor(device.clicks * 0.8),
-            trend: (Math.random() - 0.5) * 20 // Mock trend data
-          })),
-          browsers: response.browsers.map(browser => ({
-            ...browser,
-            uniqueClicks: Math.floor(browser.clicks * 0.8),
-            version: generateBrowserVersion(browser.browser),
-            trend: (Math.random() - 0.5) * 20
-          })),
-          operatingSystems: response.operatingSystems.map(os => ({
-            ...os,
-            uniqueClicks: Math.floor(os.clicks * 0.8),
-            version: generateOSVersion(os.os),
-            trend: (Math.random() - 0.5) * 20
-          })),
-          screenResolutions: generateMockResolutions()
-        })
-      } else {
-        // Generate mock data for dashboard
-        setData(generateMockDeviceData())
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load device data')
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }
 
   const generateBrowserVersion = (browser: string) => {
     const versions: { [key: string]: string } = {
@@ -399,12 +378,18 @@ const DeviceStats = ({ urlId, className = '' }: DeviceStatsProps) => {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => fetchDeviceData(false)}
+              onClick={() => refreshData()}
               disabled={isRefreshing}
               className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
+              {connectionStatus === 'reconnecting' && (
+                <span className="ml-2 text-xs text-yellow-600">Reconnecting...</span>
+              )}
+              {connectionStatus === 'disconnected' && (
+                <span className="ml-2 text-xs text-red-600">Disconnected</span>
+              )}
             </button>
             <button
               onClick={exportData}

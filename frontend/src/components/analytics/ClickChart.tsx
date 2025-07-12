@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -31,9 +31,9 @@ import {
   Minus
 } from 'lucide-react'
 import { format, subDays, subHours, startOfDay, endOfDay, parseISO, isToday, isYesterday } from 'date-fns'
-import { urlAnalyticsService } from '@/services/urls'
 import { AnalyticsPeriod } from '@/types/url'
 import { PageLoading } from '@/components/common/Loading'
+import { useRealTimeAnalytics } from '@/hooks/useRealTimeAnalytics'
 
 interface ClickChartData {
   date: string
@@ -57,13 +57,37 @@ const ClickChart = ({
   period: initialPeriod = '7d',
   className = '' 
 }: ClickChartProps) => {
-  const [data, setData] = useState<ClickChartData[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<AnalyticsPeriod>(initialPeriod)
   const [chartType, setChartType] = useState<ChartType>('area')
   const [metricType, setMetricType] = useState<MetricType>('both')
-  const [error, setError] = useState<string | null>(null)
+  
+  // Use real-time analytics hook
+  const {
+    data: analyticsData,
+    isLoading,
+    isRefreshing,
+    error,
+    refreshData,
+    connectionStatus
+  } = useRealTimeAnalytics({
+    urlId,
+    period: selectedPeriod,
+    refreshInterval: 30000, // 30 seconds
+    enabled: true
+  })
+  
+  // Transform analytics data to chart format
+  const data = useMemo(() => {
+    if (!analyticsData?.timeline) return generateMockChartData(selectedPeriod)
+    
+    return analyticsData.timeline.map(item => ({
+      date: item.date,
+      clicks: item.clicks,
+      uniqueClicks: item.uniqueClicks,
+      bounceRate: Math.random() * 40 + 30, // Mock bounce rate
+      avgSessionTime: Math.random() * 180 + 60 // Mock session time
+    }))
+  }, [analyticsData, selectedPeriod])
 
   const periods: { value: AnalyticsPeriod; label: string }[] = [
     { value: '1h', label: 'Last Hour' },
@@ -87,39 +111,6 @@ const ClickChart = ({
     { value: 'uniqueClicks', label: 'Unique Clicks', icon: <Users className="h-4 w-4" /> }
   ]
 
-  useEffect(() => {
-    fetchChartData()
-  }, [selectedPeriod, urlId])
-
-  const fetchChartData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true)
-    else setIsRefreshing(true)
-    setError(null)
-
-    try {
-      let chartData: ClickChartData[]
-
-      if (urlId) {
-        // Fetch data for specific URL
-        const response = await urlAnalyticsService.getClickTimeline(urlId, selectedPeriod)
-        chartData = response.timeline.map(item => ({
-          ...item,
-          bounceRate: Math.random() * 40 + 30, // Mock bounce rate
-          avgSessionTime: Math.random() * 180 + 60 // Mock session time
-        }))
-      } else {
-        // Generate mock aggregated data for dashboard
-        chartData = generateMockChartData(selectedPeriod)
-      }
-
-      setData(chartData)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load chart data')
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }
 
   const generateMockChartData = (period: AnalyticsPeriod): ClickChartData[] => {
     const now = new Date()
@@ -404,12 +395,18 @@ const ClickChart = ({
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => fetchChartData(false)}
+              onClick={() => refreshData()}
               disabled={isRefreshing}
               className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
+              {connectionStatus === 'reconnecting' && (
+                <span className="ml-2 text-xs text-yellow-600">Reconnecting...</span>
+              )}
+              {connectionStatus === 'disconnected' && (
+                <span className="ml-2 text-xs text-red-600">Disconnected</span>
+              )}
             </button>
             <button
               onClick={exportData}

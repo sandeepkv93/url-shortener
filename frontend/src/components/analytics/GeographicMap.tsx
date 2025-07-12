@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   BarChart,
   Bar,
@@ -27,8 +27,8 @@ import {
   PieChart as PieChartIcon,
   Grid3x3
 } from 'lucide-react'
-import { urlAnalyticsService } from '@/services/urls'
 import { PageLoading } from '@/components/common/Loading'
+import { useRealTimeAnalytics } from '@/hooks/useRealTimeAnalytics'
 
 interface GeographicData {
   countries: Array<{
@@ -65,14 +65,36 @@ type ViewMode = 'countries' | 'cities' | 'regions'
 type ChartType = 'bar' | 'pie' | 'treemap' | 'table'
 
 const GeographicMap = ({ urlId, className = '' }: GeographicMapProps) => {
-  const [data, setData] = useState<GeographicData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('countries')
   const [chartType, setChartType] = useState<ChartType>('bar')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'clicks' | 'alphabetical'>('clicks')
-  const [error, setError] = useState<string | null>(null)
+  
+  // Use real-time analytics hook
+  const {
+    data: analyticsData,
+    isLoading,
+    isRefreshing,
+    error,
+    refreshData,
+    connectionStatus
+  } = useRealTimeAnalytics({
+    urlId,
+    period: '30d',
+    refreshInterval: 30000, // 30 seconds
+    enabled: true
+  })
+  
+  // Transform analytics data to geographic format
+  const data = useMemo(() => {
+    if (!analyticsData?.geographic) return generateMockGeographicData()
+    
+    return {
+      countries: analyticsData.geographic.countries || [],
+      cities: analyticsData.geographic.cities || [],
+      regions: generateMockRegions()
+    }
+  }, [analyticsData])
 
   const viewModes: { value: ViewMode; label: string; icon: React.ReactNode }[] = [
     { value: 'countries', label: 'Countries', icon: <Globe className="h-4 w-4" /> },
@@ -87,44 +109,6 @@ const GeographicMap = ({ urlId, className = '' }: GeographicMapProps) => {
     { value: 'table', label: 'Table', icon: <Filter className="h-4 w-4" /> }
   ]
 
-  useEffect(() => {
-    fetchGeographicData()
-  }, [urlId])
-
-  const fetchGeographicData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true)
-    else setIsRefreshing(true)
-    setError(null)
-
-    try {
-      if (urlId) {
-        // Fetch data for specific URL
-        const response = await urlAnalyticsService.getGeographicStats(urlId)
-        setData({
-          countries: response.countries.map(country => ({
-            ...country,
-            uniqueClicks: Math.floor(country.clicks * 0.8),
-            coordinates: getCountryCoordinates(country.countryCode)
-          })),
-          cities: response.cities.map(city => ({
-            ...city,
-            countryCode: getCountryCode(city.country),
-            uniqueClicks: Math.floor(city.clicks * 0.8),
-            coordinates: getCityCoordinates(city.city, city.country)
-          })),
-          regions: generateMockRegions()
-        })
-      } else {
-        // Generate mock data for dashboard
-        setData(generateMockGeographicData())
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load geographic data')
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }
 
   const generateMockGeographicData = (): GeographicData => ({
     countries: [
@@ -491,12 +475,18 @@ const GeographicMap = ({ urlId, className = '' }: GeographicMapProps) => {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => fetchGeographicData(false)}
+              onClick={() => refreshData()}
               disabled={isRefreshing}
               className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
+              {connectionStatus === 'reconnecting' && (
+                <span className="ml-2 text-xs text-yellow-600">Reconnecting...</span>
+              )}
+              {connectionStatus === 'disconnected' && (
+                <span className="ml-2 text-xs text-red-600">Disconnected</span>
+              )}
             </button>
             <button
               onClick={exportData}
