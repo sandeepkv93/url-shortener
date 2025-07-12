@@ -25,7 +25,7 @@ import {
   Map,
   BarChart3,
   PieChart as PieChartIcon,
-  Grid3x3
+  Grid
 } from 'lucide-react'
 import { PageLoading } from '@/components/common/Loading'
 import { useRealTimeAnalytics } from '@/hooks/useRealTimeAnalytics'
@@ -105,7 +105,7 @@ const GeographicMap = ({ urlId, className = '' }: GeographicMapProps) => {
   const chartTypes: { value: ChartType; label: string; icon: React.ReactNode }[] = [
     { value: 'bar', label: 'Bar Chart', icon: <BarChart3 className="h-4 w-4" /> },
     { value: 'pie', label: 'Pie Chart', icon: <PieChartIcon className="h-4 w-4" /> },
-    { value: 'treemap', label: 'Treemap', icon: <Grid3x3 className="h-4 w-4" /> },
+    { value: 'treemap', label: 'Treemap', icon: <Grid className="h-4 w-4" /> },
     { value: 'table', label: 'Table', icon: <Filter className="h-4 w-4" /> }
   ]
 

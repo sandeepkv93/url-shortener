@@ -177,8 +177,8 @@ describe('API Service', () => {
 
       // Mock DOM methods
       const mockCreateElement = vi.spyOn(document, 'createElement')
-      const mockAppendChild = vi.spyOn(document.body, 'appendChild').mockImplementation(() => {} as any)
-      const mockRemoveChild = vi.spyOn(document.body, 'removeChild').mockImplementation(() => {} as any)
+      const mockAppendChild = vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any)
+      const mockRemoveChild = vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any)
       const mockCreateObjectURL = vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:mock-url')
       const mockRevokeObjectURL = vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {})
 

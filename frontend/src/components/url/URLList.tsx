@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { 
   Search, 
   Filter, 
@@ -63,7 +63,7 @@ const URLList = ({
   const [availableTags, setAvailableTags] = useState<string[]>([])
 
   // Fetch URLs with current filters
-  const fetchURLs = async (showLoading = true) => {
+  const fetchURLs = useCallback(async (showLoading = true) => {
     if (showLoading) setIsLoading(true)
     else setIsRefreshing(true)
 
@@ -89,7 +89,7 @@ const URLList = ({
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [filters])
 
   // Initial load
   useEffect(() => {
@@ -115,42 +115,42 @@ const URLList = ({
     fetchURLs(false)
   }, [filters])
 
-  const handleFilterChange = (key: keyof URLFilter, value: any) => {
+  const handleFilterChange = useCallback((key: keyof URLFilter, value: any) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
       page: 1 // Reset pagination when filters change
     }))
-  }
+  }, [])
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = useCallback((newPage: number) => {
     setFilters(prev => ({ ...prev, page: newPage }))
-  }
+  }, [])
 
-  const handleSortChange = (sortBy: string) => {
+  const handleSortChange = useCallback((sortBy: string) => {
     const newSortOrder = filters.sortBy === sortBy && filters.sortOrder === 'desc' ? 'asc' : 'desc'
     setFilters(prev => ({
       ...prev,
       sortBy: sortBy as any,
       sortOrder: newSortOrder
     }))
-  }
+  }, [filters.sortBy, filters.sortOrder])
 
-  const handleURLUpdate = (updatedURL: URLType) => {
+  const handleURLUpdate = useCallback((updatedURL: URLType) => {
     setUrls(prev => prev.map(url => url.id === updatedURL.id ? updatedURL : url))
     if (onURLUpdate) {
       onURLUpdate(updatedURL)
     }
-  }
+  }, [onURLUpdate])
 
-  const handleURLDelete = (urlId: string) => {
+  const handleURLDelete = useCallback((urlId: string) => {
     setUrls(prev => prev.filter(url => url.id !== urlId))
     if (onURLDelete) {
       onURLDelete(urlId)
     }
-  }
+  }, [onURLDelete])
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearchTerm('')
     setSelectedTags([])
     setFilters({
@@ -165,7 +165,7 @@ const URLList = ({
       page: 1,
       limit: 12
     })
-  }
+  }, [])
 
   const hasActiveFilters = useMemo(() => {
     return searchTerm || 
@@ -176,10 +176,10 @@ const URLList = ({
            filters.hasPassword !== undefined
   }, [searchTerm, selectedTags, filters])
 
-  const getSortIcon = (sortKey: string) => {
+  const getSortIcon = useCallback((sortKey: string) => {
     if (filters.sortBy !== sortKey) return null
     return filters.sortOrder === 'desc' ? <SortDesc className="h-4 w-4" /> : <SortAsc className="h-4 w-4" />
-  }
+  }, [filters.sortBy, filters.sortOrder])
 
   if (isLoading) {
     return <PageLoading message="Loading your URLs..." />
@@ -509,4 +509,4 @@ const URLList = ({
   )
 }
 
-export default URLList
+export default memo(URLList)
