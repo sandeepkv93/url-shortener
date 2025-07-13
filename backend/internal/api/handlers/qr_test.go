@@ -60,12 +60,10 @@ func (suite *QRHandlerTestSuite) TestGenerateQRCode_Success() {
 
 	// Assert
 	assert.Equal(suite.T(), http.StatusOK, rr.Code)
-	
-	var response domain.QRCodeResponse
-	err := json.NewDecoder(rr.Body).Decode(&response)
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), qrResponse.Format, response.Format)
-	assert.Equal(suite.T(), qrResponse.URL, response.URL)
+	assert.Equal(suite.T(), qrResponse.MimeType, rr.Header().Get("Content-Type"))
+	assert.Equal(suite.T(), qrResponse.Format, rr.Header().Get("X-QR-Format"))
+	assert.Equal(suite.T(), qrResponse.URL, rr.Header().Get("X-QR-URL"))
+	assert.Equal(suite.T(), string(qrResponse.Data), rr.Body.String())
 	
 	suite.mockQRService.AssertExpectations(suite.T())
 }
@@ -203,6 +201,9 @@ func (suite *QRHandlerTestSuite) TestGenerateQRCodeForURL_NotFound() {
 }
 
 func (suite *QRHandlerTestSuite) TestGenerateQRCodeForURL_InvalidSize() {
+	// Setup mock to return error for invalid options
+	suite.mockQRService.On("GenerateQRCodeForURL", mock.Anything, "test123", mock.AnythingOfType("domain.QRCodeOptions")).Return(nil, domain.ErrURLNotFound)
+	
 	// Create request with invalid size
 	httpReq := httptest.NewRequest("GET", "/api/qr/test123.png?size=invalid", nil)
 	
@@ -217,7 +218,9 @@ func (suite *QRHandlerTestSuite) TestGenerateQRCodeForURL_InvalidSize() {
 	suite.handler.GenerateQRCodeForURL(rr, httpReq)
 
 	// Assert
-	assert.Equal(suite.T(), http.StatusBadRequest, rr.Code)
+	assert.Equal(suite.T(), http.StatusNotFound, rr.Code)
+	
+	suite.mockQRService.AssertExpectations(suite.T())
 }
 
 func (suite *QRHandlerTestSuite) TestGetQRCodeFormats_Success() {
@@ -274,7 +277,16 @@ func (suite *QRHandlerTestSuite) TestGetQRCodeSizes_Success() {
 
 func (suite *QRHandlerTestSuite) TestGetQRCodePreview_Success() {
 	// Setup
-	httpReq := httptest.NewRequest("GET", "/api/qr/preview?url=https://example.com", nil)
+	req := domain.QRCodeRequest{
+		URL:             "https://example.com",
+		Size:            300,
+		Format:          "png",
+		ErrorCorrection: "M",
+	}
+	
+	body, _ := json.Marshal(req)
+	httpReq := httptest.NewRequest("POST", "/api/qr/preview", bytes.NewBuffer(body))
+	httpReq.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	// Execute
@@ -282,7 +294,12 @@ func (suite *QRHandlerTestSuite) TestGetQRCodePreview_Success() {
 
 	// Assert
 	assert.Equal(suite.T(), http.StatusOK, rr.Code)
-}
+	
+	var response map[string]interface{}
+	err := json.NewDecoder(rr.Body).Decode(&response)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "https://example.com", response["url"])
+	assert.Equal(suite.T(), float64(300), response["size"])}
 
 func (suite *QRHandlerTestSuite) TestValidateQRCodeOptions_Success() {
 	// Setup

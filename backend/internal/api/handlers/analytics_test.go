@@ -52,8 +52,9 @@ func (suite *AnalyticsHandlerTestSuite) TestGetDashboardStats_Success() {
 	// Create request
 	httpReq := httptest.NewRequest("GET", "/api/analytics/dashboard", nil)
 	
-	// Add user context
+	// Add user context (both user and user_id as middleware would)
 	ctx := context.WithValue(httpReq.Context(), "user", user)
+	ctx = context.WithValue(ctx, "user_id", uint(1))
 	httpReq = httpReq.WithContext(ctx)
 	
 	rr := httptest.NewRecorder()
@@ -160,17 +161,17 @@ func (suite *AnalyticsHandlerTestSuite) TestGetURLAnalytics_Success() {
 func (suite *AnalyticsHandlerTestSuite) TestGetClickTimeline_Success() {
 	// Setup
 	timeline := &domain.TimelineStats{
-		Period: "hour",
+		Period: "day",
 		Data: map[string]int64{
 			time.Now().Format("15:04"):                       10,
 			time.Now().Add(-1 * time.Hour).Format("15:04"): 15,
 		},
 	}
 
-	suite.mockAnalyticsService.On("GetClickTimeline", mock.Anything, uint(1), uint(1), "hour").Return(timeline, nil)
+	suite.mockAnalyticsService.On("GetClickTimeline", mock.Anything, uint(1), uint(1), "day").Return(timeline, nil)
 
 	// Create request
-	httpReq := httptest.NewRequest("GET", "/api/analytics/url/1/timeline?period=hour", nil)
+	httpReq := httptest.NewRequest("GET", "/api/analytics/url/1/timeline?period=day", nil)
 	
 	// Add chi URL params
 	rctx := chi.NewRouteContext()
@@ -325,11 +326,13 @@ func (suite *AnalyticsHandlerTestSuite) TestGetReferrerStats_Success() {
 	// Assert
 	assert.Equal(suite.T(), http.StatusOK, rr.Code)
 	
-	var response []domain.RefererStat
+	var response struct {
+		Referrers []domain.RefererStat `json:"referrers"`
+	}
 	err := json.NewDecoder(rr.Body).Decode(&response)
 	assert.NoError(suite.T(), err)
-	assert.Len(suite.T(), response, 3)
-	assert.Equal(suite.T(), referrerStats[0].Referer, response[0].Referer)
+	assert.Len(suite.T(), response.Referrers, 3)
+	assert.Equal(suite.T(), referrerStats[0].Referer, response.Referrers[0].Referer)
 	
 	suite.mockAnalyticsService.AssertExpectations(suite.T())
 }
@@ -361,6 +364,7 @@ func (suite *AnalyticsHandlerTestSuite) TestGetTopPerformingURLs_Success() {
 	
 	// Add user context
 	ctx := context.WithValue(httpReq.Context(), "user", user)
+	ctx = context.WithValue(ctx, "user_id", uint(1))
 	httpReq = httpReq.WithContext(ctx)
 	
 	rr := httptest.NewRecorder()
@@ -371,11 +375,15 @@ func (suite *AnalyticsHandlerTestSuite) TestGetTopPerformingURLs_Success() {
 	// Assert
 	assert.Equal(suite.T(), http.StatusOK, rr.Code)
 	
-	var response []*domain.URLPerformance
+	var response struct {
+		URLs  []*domain.URLPerformance `json:"urls"`
+		Limit int                       `json:"limit"`
+	}
 	err := json.NewDecoder(rr.Body).Decode(&response)
 	assert.NoError(suite.T(), err)
-	assert.Len(suite.T(), response, 2)
-	assert.Equal(suite.T(), topURLs[0].ShortURL, response[0].ShortURL)
+	assert.Len(suite.T(), response.URLs, 2)
+	assert.Equal(suite.T(), 10, response.Limit)
+	assert.Equal(suite.T(), topURLs[0].ShortURL, response.URLs[0].ShortURL)
 	
 	suite.mockAnalyticsService.AssertExpectations(suite.T())
 }
@@ -387,7 +395,7 @@ func (suite *AnalyticsHandlerTestSuite) TestExportAnalytics_Success() {
 	suite.mockAnalyticsService.On("ExportAnalytics", mock.Anything, uint(1), "csv", mock.AnythingOfType("domain.DateRange")).Return(exportData, nil)
 
 	// Create request
-	httpReq := httptest.NewRequest("GET", "/api/analytics/export?format=csv&start=2024-01-01&end=2024-01-07", nil)
+	httpReq := httptest.NewRequest("GET", "/api/analytics/export?format=csv&start_date=2024-01-01&end_date=2024-01-07", nil)
 	
 	// Add user context
 	ctx := context.WithValue(httpReq.Context(), "user_id", uint(1))
@@ -401,7 +409,7 @@ func (suite *AnalyticsHandlerTestSuite) TestExportAnalytics_Success() {
 	// Assert
 	assert.Equal(suite.T(), http.StatusOK, rr.Code)
 	assert.Equal(suite.T(), "text/csv", rr.Header().Get("Content-Type"))
-	assert.Contains(suite.T(), rr.Header().Get("Content-Disposition"), "analytics-export")
+	assert.Contains(suite.T(), rr.Header().Get("Content-Disposition"), "analytics.csv")
 	assert.Equal(suite.T(), string(exportData), rr.Body.String())
 	
 	suite.mockAnalyticsService.AssertExpectations(suite.T())

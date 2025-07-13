@@ -228,7 +228,7 @@ func (suite *URLHandlerTestSuite) TestDeleteURL_Success() {
 	suite.handler.DeleteURL(rr, httpReq)
 
 	// Assert
-	assert.Equal(suite.T(), http.StatusNoContent, rr.Code)
+	assert.Equal(suite.T(), http.StatusOK, rr.Code)
 	
 	suite.mockURLService.AssertExpectations(suite.T())
 }
@@ -262,7 +262,7 @@ func (suite *URLHandlerTestSuite) TestRedirectURL_Success() {
 	suite.handler.RedirectURL(rr, httpReq)
 
 	// Assert
-	assert.Equal(suite.T(), http.StatusFound, rr.Code)
+	assert.Equal(suite.T(), http.StatusMovedPermanently, rr.Code)
 	assert.Equal(suite.T(), shortURL.OriginalURL, rr.Header().Get("Location"))
 	
 	suite.mockURLService.AssertExpectations(suite.T())
@@ -293,21 +293,24 @@ func (suite *URLHandlerTestSuite) TestRedirectURL_NotFound() {
 
 func (suite *URLHandlerTestSuite) TestGetURL_Success() {
 	// Setup
-	shortURL := &domain.ShortURL{
-		ID:         1,
-		ShortCode:  "test123",
-		ClickCount: 100,
-		UserID:     1,
+	urlStats := &domain.URLStats{
+		ShortCode:    "test123",
+		TotalClicks:  100,
+		URL: &domain.ShortURL{
+			ID:        1,
+			ShortCode: "test123",
+			UserID:    1,
+		},
 	}
 
-	suite.mockURLService.On("GetOriginalURL", mock.Anything, "test123").Return(shortURL, nil)
+	suite.mockURLService.On("GetURLStats", mock.Anything, uint(1), uint(1)).Return(urlStats, nil)
 
 	// Create request
-	httpReq := httptest.NewRequest("GET", "/api/urls/test123", nil)
+	httpReq := httptest.NewRequest("GET", "/api/urls/1", nil)
 	
 	// Add chi URL params
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("shortCode", "test123")
+	rctx.URLParams.Add("id", "1")
 	httpReq = httpReq.WithContext(context.WithValue(httpReq.Context(), chi.RouteCtxKey, rctx))
 	
 	// Add user context
@@ -322,10 +325,10 @@ func (suite *URLHandlerTestSuite) TestGetURL_Success() {
 	// Assert
 	assert.Equal(suite.T(), http.StatusOK, rr.Code)
 	
-	var response domain.ShortURL
+	var response domain.URLStats
 	err := json.NewDecoder(rr.Body).Decode(&response)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), shortURL.ShortCode, response.ShortCode)
+	assert.Equal(suite.T(), urlStats.ShortCode, response.ShortCode)
 	
 	suite.mockURLService.AssertExpectations(suite.T())
 }

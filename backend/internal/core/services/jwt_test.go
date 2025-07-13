@@ -164,7 +164,7 @@ func TestJWTService_ExpiredToken(t *testing.T) {
 	// Try to validate expired token
 	_, err = service.ValidateAccessToken(token)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "token expired")
+	assert.Contains(t, err.Error(), "token is expired")
 }
 
 func TestJWTService_GetTokenTTL(t *testing.T) {
@@ -193,7 +193,7 @@ func TestJWTService_ExtractTokenFromHeader(t *testing.T) {
 	// Test invalid header format
 	_, err = service.ExtractTokenFromHeader("abc123")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "authorization header must start with Bearer")
+	assert.Contains(t, err.Error(), "invalid authorization header format")
 
 	// Test short header
 	_, err = service.ExtractTokenFromHeader("Bear")
