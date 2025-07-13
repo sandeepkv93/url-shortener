@@ -83,6 +83,12 @@ type NotificationService interface {
 	SendAnalyticsDigest(ctx context.Context, user *domain.User, digest *domain.AnalyticsDigest) error
 	SendClickAlert(ctx context.Context, user *domain.User, alert *domain.ClickAlert) error
 	
+	// Report notifications
+	SendScheduledReport(ctx context.Context, recipients []string, report *domain.ScheduledReport, data []byte) error
+	SendReportGenerationNotification(ctx context.Context, user *domain.User, report *domain.ScheduledReport, success bool, errorMsg string) error
+	SendDataExportNotification(ctx context.Context, user *domain.User, export *domain.DataExport) error
+	SendReportFailureAlert(ctx context.Context, user *domain.User, report *domain.ScheduledReport, error string) error
+	
 	// System notifications
 	SendMaintenanceNotification(ctx context.Context, users []*domain.User, message string) error
 	SendSecurityAlert(ctx context.Context, user *domain.User, alert *domain.SecurityAlert) error
@@ -262,4 +268,20 @@ type CompetitiveIntelligenceService interface {
 	IdentifyMarketOpportunities(ctx context.Context, userID uint) ([]domain.OpportunityGap, error)
 	AnalyzeCompetitorWeaknesses(ctx context.Context, competitorID string) ([]string, error)
 	GetEmergingTrends(ctx context.Context, industry string) ([]domain.Trend, error)
+}
+
+type SchedulerService interface {
+	// Report scheduling
+	ScheduleReport(ctx context.Context, report *domain.ScheduledReport) error
+	UnscheduleReport(ctx context.Context, reportID uint) error
+	GetDueReports(ctx context.Context) ([]*domain.ScheduledReport, error)
+	
+	// Scheduler management
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+	IsRunning() bool
+	
+	// Manual execution
+	ExecuteReportNow(ctx context.Context, reportID uint) error
+	GetJobStatus(ctx context.Context, jobID string) (*domain.JobStatus, error)
 }

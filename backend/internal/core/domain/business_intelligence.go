@@ -647,6 +647,26 @@ func (r *DataExportRequest) Validate() error {
 	return nil
 }
 
+// Job status for async operations like report generation and data exports
+type JobStatus struct {
+	ID          string                 `json:"id" gorm:"primarykey"`
+	Type        string                 `json:"type" gorm:"not null"` // report_generation, data_export, funnel_analysis
+	Status      string                 `json:"status" gorm:"not null"` // pending, running, completed, failed
+	Progress    float64                `json:"progress" gorm:"default:0"`
+	Message     string                 `json:"message"`
+	Result      map[string]interface{} `json:"result" gorm:"type:jsonb"`
+	Error       string                 `json:"error"`
+	UserID      uint                   `json:"user_id" gorm:"not null;index"`
+	ResourceID  uint                   `json:"resource_id"` // report ID, export ID, etc.
+	StartedAt   time.Time              `json:"started_at"`
+	CompletedAt *time.Time             `json:"completed_at"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+	
+	// Relationships
+	User *User `json:"user,omitempty" gorm:"foreignKey:UserID"`
+}
+
 // Additional domain types for reporting and execution
 
 type ReportExecution struct {

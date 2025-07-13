@@ -20,6 +20,9 @@ type Config struct {
 	QRHandler        *handlers.QRHandler
 	DocsHandler      *handlers.DocsHandler
 	HealthHandler    *handlers.HealthHandler
+	BIHandler        *handlers.BusinessIntelligenceHandler
+	FunnelHandler    *handlers.FunnelHandler
+	ReportingHandler *handlers.ReportingHandler
 	
 	// Middleware
 	AuthMiddleware     *middleware.AuthMiddleware
@@ -248,6 +251,95 @@ func (r *Router) setupV1Routes(apiRouter chi.Router) {
 		})
 	}
 	
+	// Business Intelligence routes
+	if r.config.BIHandler != nil && r.config.AuthMiddleware != nil {
+		apiRouter.Route("/bi", func(biRouter chi.Router) {
+			biRouter.Use(r.config.AuthMiddleware.RequireAuth)
+			
+			// Dashboard management
+			biRouter.Get("/dashboards", r.config.BIHandler.GetUserDashboards)
+			biRouter.Post("/dashboards", r.config.BIHandler.CreateDashboard)
+			biRouter.Get("/dashboards/{id}", r.config.BIHandler.GetDashboard)
+			biRouter.Put("/dashboards/{id}", r.config.BIHandler.UpdateDashboard)
+			biRouter.Delete("/dashboards/{id}", r.config.BIHandler.DeleteDashboard)
+			biRouter.Post("/dashboards/{id}/export", r.config.BIHandler.ExportDashboard)
+			
+			// Widget management
+			biRouter.Post("/widgets", r.config.BIHandler.CreateWidget)
+			biRouter.Get("/widgets/{id}", r.config.BIHandler.GetWidget)
+			biRouter.Put("/widgets/{id}", r.config.BIHandler.UpdateWidget)
+			biRouter.Delete("/widgets/{id}", r.config.BIHandler.DeleteWidget)
+			biRouter.Get("/widgets/{id}/data", r.config.BIHandler.GetWidgetData)
+			biRouter.Post("/widgets/bulk", r.config.BIHandler.BulkUpdateWidgets)
+			biRouter.Delete("/widgets/bulk", r.config.BIHandler.BulkDeleteWidgets)
+			
+			// Analytics and insights
+			biRouter.Get("/insights", r.config.BIHandler.GetBusinessInsights)
+			biRouter.Get("/insights/trends", r.config.BIHandler.GetTrendAnalysis)
+			biRouter.Get("/insights/predictive", r.config.BIHandler.GetPredictiveAnalytics)
+			biRouter.Get("/insights/competitive", r.config.BIHandler.GetCompetitiveAnalysis)
+			biRouter.Get("/recommendations", r.config.BIHandler.GetRecommendations)
+		})
+	}
+	
+	// Funnel Analytics routes
+	if r.config.FunnelHandler != nil && r.config.AuthMiddleware != nil {
+		apiRouter.Route("/funnels", func(funnelRouter chi.Router) {
+			funnelRouter.Use(r.config.AuthMiddleware.RequireAuth)
+			
+			// Funnel management
+			funnelRouter.Get("/", r.config.FunnelHandler.GetUserFunnels)
+			funnelRouter.Post("/", r.config.FunnelHandler.CreateFunnel)
+			funnelRouter.Get("/{id}", r.config.FunnelHandler.GetFunnel)
+			funnelRouter.Put("/{id}", r.config.FunnelHandler.UpdateFunnel)
+			funnelRouter.Delete("/{id}", r.config.FunnelHandler.DeleteFunnel)
+			
+			// Funnel analytics
+			funnelRouter.Get("/{id}/analytics", r.config.FunnelHandler.GetFunnelAnalytics)
+			funnelRouter.Get("/{id}/steps/{stepId}/analytics", r.config.FunnelHandler.GetFunnelStepAnalytics)
+			funnelRouter.Get("/{id}/conversion-trend", r.config.FunnelHandler.GetConversionTrend)
+			funnelRouter.Get("/{id}/drop-offs", r.config.FunnelHandler.AnalyzeFunnelDropOffs)
+			funnelRouter.Get("/{id}/optimizations", r.config.FunnelHandler.GetFunnelOptimizations)
+			
+			// Advanced funnel analytics
+			funnelRouter.Get("/comparison", r.config.FunnelHandler.GetFunnelComparisonReport)
+			funnelRouter.Get("/{id}/ab-test", r.config.FunnelHandler.GetFunnelABTestResults)
+			funnelRouter.Get("/{id}/cohort", r.config.FunnelHandler.GetFunnelCohortAnalysis)
+		})
+	}
+	
+	// Reporting routes
+	if r.config.ReportingHandler != nil && r.config.AuthMiddleware != nil {
+		apiRouter.Route("/reports", func(reportRouter chi.Router) {
+			reportRouter.Use(r.config.AuthMiddleware.RequireAuth)
+			
+			// Scheduled reports
+			reportRouter.Get("/scheduled", r.config.ReportingHandler.GetUserScheduledReports)
+			reportRouter.Post("/scheduled", r.config.ReportingHandler.CreateScheduledReport)
+			reportRouter.Get("/scheduled/{id}", r.config.ReportingHandler.GetScheduledReport)
+			reportRouter.Put("/scheduled/{id}", r.config.ReportingHandler.UpdateScheduledReport)
+			reportRouter.Delete("/scheduled/{id}", r.config.ReportingHandler.DeleteScheduledReport)
+			reportRouter.Post("/scheduled/{id}/execute", r.config.ReportingHandler.ExecuteReport)
+			reportRouter.Get("/scheduled/{id}/history", r.config.ReportingHandler.GetReportHistory)
+			
+			// Data exports
+			reportRouter.Post("/exports", r.config.ReportingHandler.CreateDataExport)
+			reportRouter.Get("/exports", r.config.ReportingHandler.GetUserDataExports)
+			reportRouter.Get("/exports/{id}", r.config.ReportingHandler.GetDataExport)
+			reportRouter.Get("/exports/{id}/download", r.config.ReportingHandler.DownloadExport)
+			
+			// Report generation
+			reportRouter.Post("/analytics", r.config.ReportingHandler.GenerateAnalyticsReport)
+			reportRouter.Get("/dashboards/{dashboardId}", r.config.ReportingHandler.GenerateDashboardReport)
+			reportRouter.Get("/funnels/{funnelId}", r.config.ReportingHandler.GenerateFunnelReport)
+			
+			// Templates and insights
+			reportRouter.Get("/templates", r.config.ReportingHandler.GetReportTemplates)
+			reportRouter.Post("/templates/{templateId}", r.config.ReportingHandler.CreateReportFromTemplate)
+			reportRouter.Get("/insights", r.config.ReportingHandler.GetReportInsights)
+		})
+	}
+	
 	// Admin routes (future expansion)
 	if r.config.AuthMiddleware != nil && r.config.AnalyticsHandler != nil {
 		apiRouter.Route("/admin", func(adminRouter chi.Router) {
@@ -334,6 +426,21 @@ func (b *RouterBuilder) WithDocsHandler(handler *handlers.DocsHandler) *RouterBu
 
 func (b *RouterBuilder) WithHealthHandler(handler *handlers.HealthHandler) *RouterBuilder {
 	b.config.HealthHandler = handler
+	return b
+}
+
+func (b *RouterBuilder) WithBIHandler(handler *handlers.BusinessIntelligenceHandler) *RouterBuilder {
+	b.config.BIHandler = handler
+	return b
+}
+
+func (b *RouterBuilder) WithFunnelHandler(handler *handlers.FunnelHandler) *RouterBuilder {
+	b.config.FunnelHandler = handler
+	return b
+}
+
+func (b *RouterBuilder) WithReportingHandler(handler *handlers.ReportingHandler) *RouterBuilder {
+	b.config.ReportingHandler = handler
 	return b
 }
 
