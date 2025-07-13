@@ -23,6 +23,7 @@ type reportingService struct {
 	userRepo             ports.UserRepository
 	notificationService  ports.NotificationService
 	configRepo           ports.ConfigService
+	dataExportService    *dataExportService
 }
 
 func NewReportingService(
@@ -35,6 +36,15 @@ func NewReportingService(
 	notificationService ports.NotificationService,
 	configRepo ports.ConfigService,
 ) ports.ReportingService {
+	// Initialize the enhanced data export service
+	dataExportService := NewDataExportService(
+		analyticsService,
+		urlRepo,
+		clickRepo,
+		userRepo,
+		notificationService,
+	)
+
 	return &reportingService{
 		analyticsService:    analyticsService,
 		biService:          biService,
@@ -44,6 +54,7 @@ func NewReportingService(
 		userRepo:           userRepo,
 		notificationService: notificationService,
 		configRepo:         configRepo,
+		dataExportService:  dataExportService,
 	}
 }
 
@@ -634,20 +645,68 @@ func (s *reportingService) sendReportEmail(ctx context.Context, report *domain.S
 }
 
 func (s *reportingService) processDataExport(ctx context.Context, export *domain.DataExport) {
-	// Simulate export processing
-	time.Sleep(2 * time.Second)
+	// Update status to processing
+	export.Status = "processing"
+	export.UpdatedAt = time.Now()
 	
-	// Generate sample data
-	data, filename := s.generateSampleExportData(export)
+	var data []byte
+	var err error
+	var filename string
 	
-	// Update export status
+	// Generate export using enhanced data export service
+	switch export.ExportType {
+	case "analytics":
+		filename = fmt.Sprintf("analytics_export_%s.%s", time.Now().Format("20060102"), export.Format)
+		switch export.Format {
+		case "csv":
+			data, err = s.dataExportService.ExportAnalyticsToCSV(ctx, export.UserID, export.Config)
+		case "excel":
+			data, err = s.dataExportService.ExportAnalyticsToExcel(ctx, export.UserID, export.Config)
+		case "pdf":
+			data, err = s.dataExportService.ExportAnalyticsToPDF(ctx, export.UserID, export.Config)
+		case "json":
+			data, err = s.dataExportService.ExportAnalyticsToJSON(ctx, export.UserID, export.Config)
+		}
+	case "urls":
+		filename = fmt.Sprintf("urls_export_%s.%s", time.Now().Format("20060102"), export.Format)
+		switch export.Format {
+		case "csv":
+			data, err = s.dataExportService.ExportURLsToCSV(ctx, export.UserID, export.Config)
+		default:
+			// For other formats, use the original method
+			data, filename = s.generateSampleExportData(export)
+		}
+	default:
+		// Use original method for other export types
+		data, filename = s.generateSampleExportData(export)
+	}
+	
+	if err != nil {
+		// Export failed
+		export.Status = "failed"
+		export.UpdatedAt = time.Now()
+		
+		// Send failure notification
+		if s.notificationService != nil {
+			user, userErr := s.userRepo.GetByID(ctx, export.UserID)
+			if userErr == nil {
+				s.notificationService.SendDataExportNotification(ctx, user, export)
+			}
+		}
+		return
+	}
+	
+	// Calculate actual record count based on export type and data
+	recordCount := s.calculateRecordCount(export, data)
+	
+	// Update export status to completed
 	export.Status = "completed"
 	export.FilePath = "/exports/" + filename
 	export.FileSize = int64(len(data))
-	export.RecordCount = 1000 // Mock record count
+	export.RecordCount = recordCount
 	export.UpdatedAt = time.Now()
 	
-	// Send notification to user that export is ready
+	// Send success notification to user that export is ready
 	if s.notificationService != nil {
 		user, err := s.userRepo.GetByID(ctx, export.UserID)
 		if err == nil {
