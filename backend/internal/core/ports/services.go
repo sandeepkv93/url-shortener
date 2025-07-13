@@ -285,3 +285,53 @@ type SchedulerService interface {
 	ExecuteReportNow(ctx context.Context, reportID uint) error
 	GetJobStatus(ctx context.Context, jobID string) (*domain.JobStatus, error)
 }
+
+type WebhookService interface {
+	// Webhook management
+	CreateWebhook(ctx context.Context, userID uint64, req domain.WebhookCreateRequest) (*domain.Webhook, error)
+	GetWebhook(ctx context.Context, webhookID uint64, userID uint64) (*domain.Webhook, error)
+	GetUserWebhooks(ctx context.Context, userID uint64, offset, limit int) ([]*domain.Webhook, int64, error)
+	UpdateWebhook(ctx context.Context, webhookID uint64, userID uint64, req domain.WebhookUpdateRequest) (*domain.Webhook, error)
+	DeleteWebhook(ctx context.Context, webhookID uint64, userID uint64) error
+	
+	// Webhook operations
+	ActivateWebhook(ctx context.Context, webhookID uint64, userID uint64) error
+	DeactivateWebhook(ctx context.Context, webhookID uint64, userID uint64) error
+	TestWebhook(ctx context.Context, webhookID uint64, userID uint64) (*domain.WebhookDelivery, error)
+	
+	// Event triggering
+	TriggerEvent(ctx context.Context, event domain.WebhookEvent, data interface{}, userID uint64) error
+	TriggerEventForUser(ctx context.Context, event domain.WebhookEvent, data interface{}, userID uint64) error
+	TriggerEventGlobally(ctx context.Context, event domain.WebhookEvent, data interface{}) error
+	
+	// Delivery management
+	GetWebhookDeliveries(ctx context.Context, webhookID uint64, userID uint64, offset, limit int) ([]*domain.WebhookDelivery, int64, error)
+	GetDelivery(ctx context.Context, deliveryID uint64, userID uint64) (*domain.WebhookDelivery, error)
+	RetryDelivery(ctx context.Context, deliveryID uint64, userID uint64) error
+	
+	// Statistics and monitoring
+	GetWebhookStats(ctx context.Context, webhookID uint64, userID uint64) (*domain.WebhookDeliveryStats, error)
+	GetFailedDeliveries(ctx context.Context, webhookID uint64, userID uint64, limit int) ([]*domain.WebhookDelivery, error)
+	
+	// Administrative functions
+	ProcessPendingRetries(ctx context.Context) error
+	CleanupOldDeliveries(ctx context.Context, olderThanDays int) (int64, error)
+}
+
+type WebhookDeliveryService interface {
+	// Delivery execution
+	DeliverWebhook(ctx context.Context, webhook *domain.Webhook, payload *domain.WebhookPayload) (*domain.WebhookDelivery, error)
+	
+	// Retry logic
+	RetryFailedDelivery(ctx context.Context, delivery *domain.WebhookDelivery) (*domain.WebhookDelivery, error)
+	ScheduleRetry(ctx context.Context, delivery *domain.WebhookDelivery) error
+	
+	// Batch operations
+	ProcessPendingDeliveries(ctx context.Context, limit int) (int, error)
+	ProcessFailedDeliveries(ctx context.Context, limit int) (int, error)
+	
+	// Utilities
+	ValidateWebhookURL(ctx context.Context, url string) error
+	GenerateSignature(payload []byte, secret string) string
+	VerifySignature(payload []byte, signature, secret string) bool
+}

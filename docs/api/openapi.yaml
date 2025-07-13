@@ -1053,6 +1053,834 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # Business Intelligence Endpoints
+  /bi/dashboards:
+    get:
+      tags: [Business Intelligence]
+      summary: Get user dashboards
+      description: Retrieve all dashboards for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Dashboards retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Business Intelligence]
+      summary: Create dashboard
+      description: Create a new BI dashboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDashboardRequest'
+      responses:
+        '201':
+          description: Dashboard created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BIDashboardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /bi/dashboards/{id}:
+    get:
+      tags: [Business Intelligence]
+      summary: Get dashboard
+      description: Retrieve a specific dashboard with widgets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Dashboard ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Dashboard retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BIDashboardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Business Intelligence]
+      summary: Update dashboard
+      description: Update an existing dashboard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Dashboard ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDashboardRequest'
+      responses:
+        '200':
+          description: Dashboard updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BIDashboardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Business Intelligence]
+      summary: Delete dashboard
+      description: Delete a dashboard and all its widgets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Dashboard ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Dashboard deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bi/widgets:
+    post:
+      tags: [Business Intelligence]
+      summary: Create widget
+      description: Create a new dashboard widget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWidgetRequest'
+      responses:
+        '201':
+          description: Widget created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /bi/widgets/{id}:
+    get:
+      tags: [Business Intelligence]
+      summary: Get widget
+      description: Retrieve a specific widget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Widget ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Widget retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Business Intelligence]
+      summary: Update widget
+      description: Update an existing widget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Widget ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWidgetRequest'
+      responses:
+        '200':
+          description: Widget updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Business Intelligence]
+      summary: Delete widget
+      description: Delete a widget from dashboard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Widget ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Widget deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bi/widgets/{id}/data:
+    get:
+      tags: [Business Intelligence]
+      summary: Get widget data
+      description: Retrieve data for a specific widget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Widget ID
+          schema:
+            type: integer
+        - name: time_range
+          in: query
+          description: Time range for data
+          schema:
+            type: string
+            enum: [1h, 24h, 7d, 30d, 90d, 1y]
+            default: 7d
+      responses:
+        '200':
+          description: Widget data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetDataResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bi/insights:
+    get:
+      tags: [Business Intelligence]
+      summary: Get business insights
+      description: Retrieve AI-powered business insights and recommendations
+      parameters:
+        - name: period
+          in: query
+          description: Analysis period
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: month
+      responses:
+        '200':
+          description: Business insights retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessInsightsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Funnel Analytics Endpoints
+  /funnels:
+    get:
+      tags: [Funnel Analytics]
+      summary: Get user funnels
+      description: Retrieve all conversion funnels for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: is_active
+          in: query
+          description: Filter by active status
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Funnels retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Funnel Analytics]
+      summary: Create funnel
+      description: Create a new conversion funnel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFunnelRequest'
+      responses:
+        '201':
+          description: Funnel created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /funnels/{id}:
+    get:
+      tags: [Funnel Analytics]
+      summary: Get funnel
+      description: Retrieve a specific funnel with steps
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Funnel ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Funnel retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Funnel Analytics]
+      summary: Update funnel
+      description: Update an existing funnel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Funnel ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFunnelRequest'
+      responses:
+        '200':
+          description: Funnel updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Funnel Analytics]
+      summary: Delete funnel
+      description: Delete a funnel and all its steps
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Funnel ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Funnel deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /funnels/{id}/analytics:
+    get:
+      tags: [Funnel Analytics]
+      summary: Get funnel analytics
+      description: Retrieve detailed analytics for a specific funnel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Funnel ID
+          schema:
+            type: integer
+        - name: period
+          in: query
+          description: Analysis period
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+      responses:
+        '200':
+          description: Funnel analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelAnalyticsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Reporting Endpoints
+  /reports/scheduled:
+    get:
+      tags: [Reporting]
+      summary: Get scheduled reports
+      description: Retrieve all scheduled reports for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: is_active
+          in: query
+          description: Filter by active status
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Scheduled reports retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledReportListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Reporting]
+      summary: Create scheduled report
+      description: Create a new scheduled report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduledReportRequest'
+      responses:
+        '201':
+          description: Scheduled report created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledReportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /reports/scheduled/{id}:
+    get:
+      tags: [Reporting]
+      summary: Get scheduled report
+      description: Retrieve a specific scheduled report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Report ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Scheduled report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledReportResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Reporting]
+      summary: Update scheduled report
+      description: Update an existing scheduled report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Report ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduledReportRequest'
+      responses:
+        '200':
+          description: Scheduled report updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledReportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Reporting]
+      summary: Delete scheduled report
+      description: Delete a scheduled report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Report ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Scheduled report deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reports/exports:
+    get:
+      tags: [Reporting]
+      summary: Get data exports
+      description: Retrieve all data exports for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: status
+          in: query
+          description: Filter by export status
+          schema:
+            type: string
+            enum: [pending, processing, completed, failed]
+      responses:
+        '200':
+          description: Data exports retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataExportListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Reporting]
+      summary: Create data export
+      description: Create a new data export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDataExportRequest'
+      responses:
+        '201':
+          description: Data export created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataExportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /reports/exports/{id}/download:
+    get:
+      tags: [Reporting]
+      summary: Download export
+      description: Download a completed data export
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Export ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Export file downloaded successfully
+          content:
+            application/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Export not ready for download
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Export has expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Competitive Intelligence Endpoints
+  /competitive/market-position:
+    get:
+      tags: [Competitive Intelligence]
+      summary: Get market position
+      description: Retrieve user's market position analysis
+      responses:
+        '200':
+          description: Market position retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPositionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /competitive/benchmarks:
+    get:
+      tags: [Competitive Intelligence]
+      summary: Get industry benchmarks
+      description: Retrieve industry benchmark data
+      parameters:
+        - name: industry
+          in: query
+          description: Industry category
+          schema:
+            type: string
+            default: "URL Shortening"
+        - name: metrics
+          in: query
+          description: Specific metrics to benchmark
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [click_rate, conversion_rate, mobile_usage, geographic_reach]
+      responses:
+        '200':
+          description: Industry benchmarks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarkDataResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /competitive/opportunities:
+    get:
+      tags: [Competitive Intelligence]
+      summary: Get market opportunities
+      description: Retrieve identified market opportunities
+      parameters:
+        - name: priority
+          in: query
+          description: Filter by priority level
+          schema:
+            type: string
+            enum: [high, medium, low]
+        - name: impact
+          in: query
+          description: Filter by impact level
+          schema:
+            type: string
+            enum: [high, medium, low]
+      responses:
+        '200':
+          description: Market opportunities retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketOpportunitiesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /competitive/overview:
+    get:
+      tags: [Competitive Intelligence]
+      summary: Get competitive overview
+      description: Retrieve comprehensive competitive intelligence overview
+      responses:
+        '200':
+          description: Competitive overview retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompetitiveOverviewResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # Admin Endpoints
   /admin/stats:
     get:

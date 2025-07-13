@@ -24,6 +24,7 @@ type Config struct {
 	FunnelHandler                *handlers.FunnelHandler
 	ReportingHandler             *handlers.ReportingHandler
 	CompetitiveIntelligenceHandler *handlers.CompetitiveIntelligenceHandler
+	WebhookHandler               *handlers.WebhookHandler
 	
 	// Middleware
 	AuthMiddleware     *middleware.AuthMiddleware
@@ -366,6 +367,37 @@ func (r *Router) setupV1Routes(apiRouter chi.Router) {
 		})
 	}
 	
+	// Webhook routes
+	if r.config.WebhookHandler != nil && r.config.AuthMiddleware != nil {
+		apiRouter.Route("/webhooks", func(webhookRouter chi.Router) {
+			webhookRouter.Use(r.config.AuthMiddleware.RequireAuth)
+			
+			// Webhook management
+			webhookRouter.Post("/", r.config.WebhookHandler.CreateWebhook)
+			webhookRouter.Get("/", r.config.WebhookHandler.GetUserWebhooks)
+			webhookRouter.Get("/{id}", r.config.WebhookHandler.GetWebhook)
+			webhookRouter.Put("/{id}", r.config.WebhookHandler.UpdateWebhook)
+			webhookRouter.Delete("/{id}", r.config.WebhookHandler.DeleteWebhook)
+			
+			// Webhook operations
+			webhookRouter.Post("/{id}/activate", r.config.WebhookHandler.ActivateWebhook)
+			webhookRouter.Post("/{id}/deactivate", r.config.WebhookHandler.DeactivateWebhook)
+			webhookRouter.Post("/{id}/test", r.config.WebhookHandler.TestWebhook)
+			
+			// Webhook analytics and monitoring
+			webhookRouter.Get("/{id}/stats", r.config.WebhookHandler.GetWebhookStats)
+			webhookRouter.Get("/{id}/deliveries", r.config.WebhookHandler.GetWebhookDeliveries)
+			webhookRouter.Get("/{id}/failed-deliveries", r.config.WebhookHandler.GetFailedDeliveries)
+			
+			// Delivery management
+			webhookRouter.Get("/deliveries/{delivery_id}", r.config.WebhookHandler.GetDelivery)
+			webhookRouter.Post("/deliveries/{delivery_id}/retry", r.config.WebhookHandler.RetryDelivery)
+			
+			// Utility endpoints
+			webhookRouter.Get("/events", r.config.WebhookHandler.GetWebhookEvents)
+		})
+	}
+	
 	// Admin routes (future expansion)
 	if r.config.AuthMiddleware != nil && r.config.AnalyticsHandler != nil {
 		apiRouter.Route("/admin", func(adminRouter chi.Router) {
@@ -472,6 +504,11 @@ func (b *RouterBuilder) WithReportingHandler(handler *handlers.ReportingHandler)
 
 func (b *RouterBuilder) WithCompetitiveIntelligenceHandler(handler *handlers.CompetitiveIntelligenceHandler) *RouterBuilder {
 	b.config.CompetitiveIntelligenceHandler = handler
+	return b
+}
+
+func (b *RouterBuilder) WithWebhookHandler(handler *handlers.WebhookHandler) *RouterBuilder {
+	b.config.WebhookHandler = handler
 	return b
 }
 

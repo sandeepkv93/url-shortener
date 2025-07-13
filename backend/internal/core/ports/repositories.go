@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"url-shortener/internal/core/domain"
 )
@@ -69,4 +70,52 @@ type ClickRepository interface {
 	// Global analytics
 	GetGlobalStats(ctx context.Context) (*domain.GlobalStats, error)
 	GetUserStats(ctx context.Context, userID uint) (*domain.UserAnalytics, error)
+}
+
+type WebhookRepository interface {
+	// Webhook management
+	Create(ctx context.Context, webhook *domain.Webhook) error
+	GetByID(ctx context.Context, id uint64) (*domain.Webhook, error)
+	Update(ctx context.Context, webhook *domain.Webhook) error
+	Delete(ctx context.Context, id uint64) error
+	
+	// Webhook queries
+	GetByUserID(ctx context.Context, userID uint64, offset, limit int) ([]*domain.Webhook, int64, error)
+	GetActiveWebhooks(ctx context.Context, event domain.WebhookEvent) ([]*domain.Webhook, error)
+	GetByUserIDAndEvent(ctx context.Context, userID uint64, event domain.WebhookEvent) ([]*domain.Webhook, error)
+	
+	// Webhook operations
+	UpdateStatus(ctx context.Context, id uint64, status domain.WebhookStatus) error
+	UpdateStatistics(ctx context.Context, id uint64, totalDeliveries, successDeliveries, failedDeliveries int64) error
+	UpdateLastDelivery(ctx context.Context, id uint64, success bool) error
+	
+	// Webhook filtering
+	Find(ctx context.Context, filter *domain.WebhookFilter, offset, limit int) ([]*domain.Webhook, int64, error)
+}
+
+type WebhookDeliveryRepository interface {
+	// Delivery management
+	Create(ctx context.Context, delivery *domain.WebhookDelivery) error
+	GetByID(ctx context.Context, id uint64) (*domain.WebhookDelivery, error)
+	Update(ctx context.Context, delivery *domain.WebhookDelivery) error
+	Delete(ctx context.Context, id uint64) error
+	
+	// Delivery queries
+	GetByWebhookID(ctx context.Context, webhookID uint64, offset, limit int) ([]*domain.WebhookDelivery, int64, error)
+	GetPendingRetries(ctx context.Context, limit int) ([]*domain.WebhookDelivery, error)
+	GetFailedDeliveries(ctx context.Context, webhookID uint64, limit int) ([]*domain.WebhookDelivery, error)
+	
+	// Delivery operations
+	UpdateStatus(ctx context.Context, id uint64, status domain.WebhookDeliveryStatus, errorMessage string) error
+	ScheduleRetry(ctx context.Context, id uint64, nextRetryAt *time.Time) error
+	IncrementAttempt(ctx context.Context, id uint64) error
+	
+	// Delivery filtering
+	Find(ctx context.Context, filter *domain.WebhookDeliveryFilter, offset, limit int) ([]*domain.WebhookDelivery, int64, error)
+	
+	// Delivery statistics
+	GetDeliveryStats(ctx context.Context, webhookID uint64) (*domain.WebhookDeliveryStats, error)
+	
+	// Cleanup operations
+	DeleteOldDeliveries(ctx context.Context, olderThan time.Time) (int64, error)
 }
