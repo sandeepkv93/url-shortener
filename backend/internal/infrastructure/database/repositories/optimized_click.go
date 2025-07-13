@@ -46,8 +46,8 @@ func (r *OptimizedClickRepository) BatchRecordClicks(ctx context.Context, clicks
 func (r *OptimizedClickRepository) GetClickStatsOptimized(ctx context.Context, shortURLID uint, startDate, endDate time.Time) (*domain.ClickStats, error) {
 	stats := &domain.ClickStats{
 		ShortURLID: shortURLID,
-		StartDate:  startDate,
-		EndDate:    endDate,
+		StartDate:  &startDate,
+		EndDate:    &endDate,
 	}
 	
 	// Use read-only transaction for better performance

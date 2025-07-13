@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -351,7 +352,7 @@ func TestJWTService_TokenStructure(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify token has 3 parts (header.payload.signature)
-	parts := jwt.SplitToken(token)
+	parts := strings.Split(token, ".")
 	assert.Len(t, parts, 3)
 	assert.NotEmpty(t, parts[0]) // header
 	assert.NotEmpty(t, parts[1]) // payload

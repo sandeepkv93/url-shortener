@@ -60,6 +60,11 @@ func (m *MockUserRepository) GetUserStats(ctx context.Context, userID uint) (*do
 	return args.Get(0).(*domain.UserStats), args.Error(1)
 }
 
+func (m *MockUserRepository) Exists(ctx context.Context, email string) (bool, error) {
+	args := m.Called(ctx, email)
+	return args.Bool(0), args.Error(1)
+}
+
 // MockURLRepository is a mock implementation of URLRepository
 type MockURLRepository struct {
 	mock.Mock
@@ -153,6 +158,29 @@ func (m *MockURLRepository) BulkDelete(ctx context.Context, ids []uint) error {
 	return args.Error(0)
 }
 
+func (m *MockURLRepository) ExistsByShortCode(ctx context.Context, shortCode string) (bool, error) {
+	args := m.Called(ctx, shortCode)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockURLRepository) GetActiveByShortCode(ctx context.Context, shortCode string) (*domain.ShortURL, error) {
+	args := m.Called(ctx, shortCode)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.ShortURL), args.Error(1)
+}
+
+func (m *MockURLRepository) GetTotalURLsByUser(ctx context.Context, userID uint) (int64, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockURLRepository) IncrementClickCount(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 // MockClickRepository is a mock implementation of ClickRepository
 type MockClickRepository struct {
 	mock.Mock
@@ -163,21 +191,106 @@ func (m *MockClickRepository) Create(ctx context.Context, click *domain.Click) e
 	return args.Error(0)
 }
 
-func (m *MockClickRepository) GetByURLID(ctx context.Context, urlID uint, offset, limit int) ([]*domain.Click, int64, error) {
-	args := m.Called(ctx, urlID, offset, limit)
+func (m *MockClickRepository) GetByID(ctx context.Context, id uint) (*domain.Click, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Click), args.Error(1)
+}
+
+func (m *MockClickRepository) GetByShortURLID(ctx context.Context, shortURLID uint, offset, limit int) ([]*domain.Click, int64, error) {
+	args := m.Called(ctx, shortURLID, offset, limit)
 	if args.Get(0) == nil {
 		return nil, args.Get(1).(int64), args.Error(2)
 	}
 	return args.Get(0).([]*domain.Click), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockClickRepository) GetTotalClicks(ctx context.Context) (int64, error) {
+func (m *MockClickRepository) GetClickStats(ctx context.Context, shortURLID uint, period string) (*domain.ClickStats, error) {
+	args := m.Called(ctx, shortURLID, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.ClickStats), args.Error(1)
+}
+
+func (m *MockClickRepository) GetGeoStats(ctx context.Context, shortURLID uint) (*domain.GeoStats, error) {
+	args := m.Called(ctx, shortURLID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.GeoStats), args.Error(1)
+}
+
+func (m *MockClickRepository) GetGlobalStats(ctx context.Context) (*domain.GlobalStats, error) {
 	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.GlobalStats), args.Error(1)
+}
+
+func (m *MockClickRepository) GetTimelineStats(ctx context.Context, shortURLID uint, period string) (*domain.TimelineStats, error) {
+	args := m.Called(ctx, shortURLID, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.TimelineStats), args.Error(1)
+}
+
+func (m *MockClickRepository) GetTotalClicks(ctx context.Context, shortURLID uint) (int64, error) {
+	args := m.Called(ctx, shortURLID)
 	return args.Get(0).(int64), args.Error(1)
 }
 
-func (m *MockClickRepository) GetClicksByDateRange(ctx context.Context, urlID uint, start, end time.Time) ([]*domain.Click, error) {
-	args := m.Called(ctx, urlID, start, end)
+func (m *MockClickRepository) GetUniqueClicks(ctx context.Context, shortURLID uint) (int64, error) {
+	args := m.Called(ctx, shortURLID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockClickRepository) GetTopCountries(ctx context.Context, shortURLID uint, limit int) ([]domain.CountryStat, error) {
+	args := m.Called(ctx, shortURLID, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.CountryStat), args.Error(1)
+}
+
+func (m *MockClickRepository) GetTopDevices(ctx context.Context, shortURLID uint, limit int) ([]domain.DeviceStat, error) {
+	args := m.Called(ctx, shortURLID, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.DeviceStat), args.Error(1)
+}
+
+func (m *MockClickRepository) GetTopBrowsers(ctx context.Context, shortURLID uint, limit int) ([]domain.BrowserStat, error) {
+	args := m.Called(ctx, shortURLID, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.BrowserStat), args.Error(1)
+}
+
+func (m *MockClickRepository) GetTopReferers(ctx context.Context, shortURLID uint, limit int) ([]domain.RefererStat, error) {
+	args := m.Called(ctx, shortURLID, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.RefererStat), args.Error(1)
+}
+
+func (m *MockClickRepository) GetUserStats(ctx context.Context, userID uint) (*domain.UserAnalytics, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.UserAnalytics), args.Error(1)
+}
+
+func (m *MockClickRepository) GetClicksByDateRange(ctx context.Context, shortURLID uint, startDate, endDate string) ([]*domain.Click, error) {
+	args := m.Called(ctx, shortURLID, startDate, endDate)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -208,14 +321,6 @@ func (m *MockClickRepository) GetClicksByReferrer(ctx context.Context, urlID uin
 	return args.Get(0).(map[string]int64), args.Error(1)
 }
 
-func (m *MockClickRepository) GetTopCountries(ctx context.Context, limit int) ([]domain.CountryStats, error) {
-	args := m.Called(ctx, limit)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]domain.CountryStats), args.Error(1)
-}
-
 func (m *MockClickRepository) GetUserClickStats(ctx context.Context, userID uint) (*domain.UserClickStats, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
@@ -224,12 +329,12 @@ func (m *MockClickRepository) GetUserClickStats(ctx context.Context, userID uint
 	return args.Get(0).(*domain.UserClickStats), args.Error(1)
 }
 
-func (m *MockClickRepository) GetRecentClicks(ctx context.Context, limit int) ([]*domain.Click, error) {
-	args := m.Called(ctx, limit)
+func (m *MockClickRepository) GetRecentClicks(ctx context.Context, shortURLID uint, limit int) ([]domain.RecentClickStat, error) {
+	args := m.Called(ctx, shortURLID, limit)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*domain.Click), args.Error(1)
+	return args.Get(0).([]domain.RecentClickStat), args.Error(1)
 }
 
 func (m *MockClickRepository) GetHourlyStats(ctx context.Context, urlID uint, date time.Time) ([]domain.HourlyStats, error) {
@@ -263,7 +368,7 @@ func (m *MockCacheService) Get(ctx context.Context, key string) (string, error) 
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockCacheService) Set(ctx context.Context, key, value string, ttl time.Duration) error {
+func (m *MockCacheService) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	args := m.Called(ctx, key, value, ttl)
 	return args.Error(0)
 }
@@ -308,6 +413,149 @@ func (m *MockCacheService) Exists(ctx context.Context, key string) (bool, error)
 
 func (m *MockCacheService) Clear(ctx context.Context) error {
 	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) SetSession(ctx context.Context, token string, userID uint, ttl time.Duration) error {
+	args := m.Called(ctx, token, userID, ttl)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) GetSession(ctx context.Context, token string) (uint, error) {
+	args := m.Called(ctx, token)
+	return args.Get(0).(uint), args.Error(1)
+}
+
+func (m *MockCacheService) Del(ctx context.Context, keys ...string) error {
+	args := m.Called(ctx, keys)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) TTL(ctx context.Context, key string) (time.Duration, error) {
+	args := m.Called(ctx, key)
+	return args.Get(0).(time.Duration), args.Error(1)
+}
+
+func (m *MockCacheService) Incr(ctx context.Context, key string) (int64, error) {
+	args := m.Called(ctx, key)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockCacheService) IncrBy(ctx context.Context, key string, value int64) (int64, error) {
+	args := m.Called(ctx, key, value)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockCacheService) SAdd(ctx context.Context, key string, members ...interface{}) error {
+	args := m.Called(ctx, key, members)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) SIsMember(ctx context.Context, key string, member interface{}) (bool, error) {
+	args := m.Called(ctx, key, member)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockCacheService) SCard(ctx context.Context, key string) (int64, error) {
+	args := m.Called(ctx, key)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockCacheService) HSet(ctx context.Context, key string, values ...interface{}) error {
+	args := m.Called(ctx, key, values)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) HGet(ctx context.Context, key, field string) (string, error) {
+	args := m.Called(ctx, key, field)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockCacheService) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	args := m.Called(ctx, key)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string]string), args.Error(1)
+}
+
+func (m *MockCacheService) HDel(ctx context.Context, key string, fields ...string) error {
+	args := m.Called(ctx, key, fields)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) CacheURL(ctx context.Context, shortCode, originalURL string, userID uint, expiration time.Duration) error {
+	args := m.Called(ctx, shortCode, originalURL, userID, expiration)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) GetCachedURL(ctx context.Context, shortCode string) (string, uint, error) {
+	args := m.Called(ctx, shortCode)
+	return args.String(0), args.Get(1).(uint), args.Error(2)
+}
+
+func (m *MockCacheService) InvalidateURL(ctx context.Context, shortCode string) error {
+	args := m.Called(ctx, shortCode)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) IsRateLimited(ctx context.Context, key string, limit int64, window time.Duration) (bool, error) {
+	args := m.Called(ctx, key, limit, window)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockCacheService) IncrementRateLimit(ctx context.Context, key string, window time.Duration) (int64, error) {
+	args := m.Called(ctx, key, window)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockCacheService) InvalidateSession(ctx context.Context, token string) error {
+	args := m.Called(ctx, token)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) CacheClickCount(ctx context.Context, shortCode string, count int64) error {
+	args := m.Called(ctx, shortCode, count)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) GetClickCount(ctx context.Context, shortCode string) (int64, error) {
+	args := m.Called(ctx, shortCode)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockCacheService) IncrementClickCount(ctx context.Context, shortCode string) (int64, error) {
+	args := m.Called(ctx, shortCode)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockCacheService) CacheUniqueClick(ctx context.Context, shortCode, ipAddress string) (bool, error) {
+	args := m.Called(ctx, shortCode, ipAddress)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockCacheService) GetUniqueClickCount(ctx context.Context, shortCode string) (int64, error) {
+	args := m.Called(ctx, shortCode)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockCacheService) Ping(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) FlushDB(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockCacheService) Info(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockCacheService) Close() error {
+	args := m.Called()
 	return args.Error(0)
 }
 
@@ -663,5 +911,69 @@ func (m *MockConfigService) GetRawConfig() interface{} {
 
 func (m *MockConfigService) Validate() error {
 	args := m.Called()
+	return args.Error(0)
+}
+
+// MockJWTService is a mock implementation of JWTService
+type MockJWTService struct {
+	mock.Mock
+}
+
+func (m *MockJWTService) GenerateAccessToken(userID uint, email string) (string, error) {
+	args := m.Called(userID, email)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockJWTService) GenerateRefreshToken(userID uint) (string, error) {
+	args := m.Called(userID)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockJWTService) ValidateAccessToken(token string) (*domain.TokenClaims, error) {
+	args := m.Called(token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.TokenClaims), args.Error(1)
+}
+
+func (m *MockJWTService) ValidateRefreshToken(token string) (*domain.TokenClaims, error) {
+	args := m.Called(token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.TokenClaims), args.Error(1)
+}
+
+func (m *MockJWTService) GetTokenTTL(tokenType string) time.Duration {
+	args := m.Called(tokenType)
+	return args.Get(0).(time.Duration)
+}
+
+func (m *MockJWTService) ExtractTokenFromHeader(authHeader string) (string, error) {
+	args := m.Called(authHeader)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockJWTService) GetUserIDFromToken(tokenString string) (uint, error) {
+	args := m.Called(tokenString)
+	return args.Get(0).(uint), args.Error(1)
+}
+
+func (m *MockJWTService) IsTokenExpired(tokenString string) bool {
+	args := m.Called(tokenString)
+	return args.Bool(0)
+}
+
+func (m *MockJWTService) GetTokenClaims(tokenString string) (*domain.TokenClaims, error) {
+	args := m.Called(tokenString)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.TokenClaims), args.Error(1)
+}
+
+func (m *MockJWTService) RevokeToken(tokenString string) error {
+	args := m.Called(tokenString)
 	return args.Error(0)
 }

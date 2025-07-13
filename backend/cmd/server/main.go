@@ -26,10 +26,7 @@ func main() {
 	}
 
 	// Initialize logging service
-	logger := services.NewLoggingService(&services.LoggingConfig{
-		Level:  cfg.Logging.Level,
-		Format: cfg.Logging.Format,
-	})
+	logger := services.NewLoggingService("url-shortener", "1.0.0", cfg.Server.Env)
 
 	// Initialize graceful shutdown manager
 	shutdownManager := shutdown.NewGracefulShutdown(cfg, logger)

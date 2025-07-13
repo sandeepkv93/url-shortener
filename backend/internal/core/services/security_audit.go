@@ -186,9 +186,6 @@ func (s *securityAuditService) GetSecurityMetrics(ctx context.Context, timeRange
 	}
 	
 	// Get metrics from cache counters
-	now := time.Now()
-	startTime := now.Add(-timeRange)
-	
 	// Count different types of security events
 	eventTypes := []string{
 		"failed_login", "rate_limit_violation", "suspicious_url",
@@ -197,7 +194,7 @@ func (s *securityAuditService) GetSecurityMetrics(ctx context.Context, timeRange
 	
 	for _, eventType := range eventTypes {
 		key := fmt.Sprintf("security_metrics:%s", eventType)
-		count, err := s.cache.GetCounter(ctx, key)
+		count, err := s.getCounterValue(ctx, key)
 		if err == nil {
 			metrics.EventCounts[eventType] = int(count)
 		}
@@ -205,14 +202,14 @@ func (s *securityAuditService) GetSecurityMetrics(ctx context.Context, timeRange
 	
 	// Get rate limit violations
 	rateLimitKey := "security_metrics:rate_limit_total"
-	rateLimitCount, err := s.cache.GetCounter(ctx, rateLimitKey)
+	rateLimitCount, err := s.getCounterValue(ctx, rateLimitKey)
 	if err == nil {
 		metrics.RateLimitViolations = int(rateLimitCount)
 	}
 	
 	// Get blocked requests
 	blockedKey := "security_metrics:blocked_requests"
-	blockedCount, err := s.cache.GetCounter(ctx, blockedKey)
+	blockedCount, err := s.getCounterValue(ctx, blockedKey)
 	if err == nil {
 		metrics.BlockedRequests = int(blockedCount)
 	}
@@ -259,46 +256,43 @@ func (s *securityAuditService) CheckSecurityAlerts(ctx context.Context) ([]*doma
 	
 	// Check for high rate of failed login attempts
 	failedLoginKey := "security_metrics:failed_login"
-	failedLogins, err := s.cache.GetCounter(ctx, failedLoginKey)
+	failedLogins, err := s.getCounterValue(ctx, failedLoginKey)
 	if err == nil && failedLogins > 100 { // More than 100 failed logins in the last period
 		alerts = append(alerts, &domain.SecurityAlert{
-			ID:          fmt.Sprintf("failed_login_%d", time.Now().Unix()),
-			Type:        domain.AlertTypeSecurityBreach,
-			Severity:    domain.SecuritySeverityHigh,
-			Title:       "High Rate of Failed Login Attempts",
-			Description: fmt.Sprintf("Detected %d failed login attempts in recent period", failedLogins),
-			CreatedAt:   time.Now(),
-			Resolved:    false,
+			Type:        string(domain.AlertTypeSecurityBreach),
+			AlertType:   "failed_login_attempts",
+			Severity:    string(domain.SecuritySeverityHigh),
+			Description: fmt.Sprintf("High Rate of Failed Login Attempts: Detected %d failed login attempts in recent period", failedLogins),
+			TriggeredAt: time.Now(),
+			Timestamp:   time.Now(),
 		})
 	}
 	
 	// Check for high rate limit violations
 	rateLimitKey := "security_metrics:rate_limit_violations_per_hour"
-	rateLimitViolations, err := s.cache.GetCounter(ctx, rateLimitKey)
+	rateLimitViolations, err := s.getCounterValue(ctx, rateLimitKey)
 	if err == nil && rateLimitViolations > 1000 {
 		alerts = append(alerts, &domain.SecurityAlert{
-			ID:          fmt.Sprintf("rate_limit_%d", time.Now().Unix()),
-			Type:        domain.AlertTypeRateLimit,
-			Severity:    domain.SecuritySeverityMedium,
-			Title:       "High Rate Limit Violations",
-			Description: fmt.Sprintf("Detected %d rate limit violations in the last hour", rateLimitViolations),
-			CreatedAt:   time.Now(),
-			Resolved:    false,
+			Type:        string(domain.AlertTypeRateLimit),
+			AlertType:   "rate_limit_violations",
+			Severity:    string(domain.SecuritySeverityMedium),
+			Description: fmt.Sprintf("High Rate Limit Violations: Detected %d rate limit violations in the last hour", rateLimitViolations),
+			TriggeredAt: time.Now(),
+			Timestamp:   time.Now(),
 		})
 	}
 	
 	// Check for suspicious activity patterns
 	suspiciousKey := "security_metrics:suspicious_activity_score"
-	suspiciousScore, err := s.cache.GetCounter(ctx, suspiciousKey)
+	suspiciousScore, err := s.getCounterValue(ctx, suspiciousKey)
 	if err == nil && suspiciousScore > 500 {
 		alerts = append(alerts, &domain.SecurityAlert{
-			ID:          fmt.Sprintf("suspicious_%d", time.Now().Unix()),
-			Type:        domain.AlertTypeSuspiciousActivity,
-			Severity:    domain.SecuritySeverityCritical,
-			Title:       "High Suspicious Activity Score",
-			Description: fmt.Sprintf("Cumulative suspicious activity score: %d", suspiciousScore),
-			CreatedAt:   time.Now(),
-			Resolved:    false,
+			Type:        string(domain.AlertTypeSuspiciousActivity),
+			AlertType:   "suspicious_activity",
+			Severity:    string(domain.SecuritySeverityCritical),
+			Description: fmt.Sprintf("High Suspicious Activity Score: Cumulative suspicious activity score: %d", suspiciousScore),
+			TriggeredAt: time.Now(),
+			Timestamp:   time.Now(),
 		})
 	}
 	
@@ -310,25 +304,25 @@ func (s *securityAuditService) CheckSecurityAlerts(ctx context.Context) ([]*doma
 func (s *securityAuditService) updateSecurityMetrics(ctx context.Context, event *domain.SecurityEvent) {
 	// Update general counters
 	key := fmt.Sprintf("security_metrics:%s", event.Type)
-	s.cache.IncrementCounter(key, 1, 24*time.Hour)
+	s.cache.IncrBy(ctx, key, 1)
 	
 	// Update severity counters
 	severityKey := fmt.Sprintf("security_metrics:severity:%s", event.Severity)
-	s.cache.IncrementCounter(severityKey, 1, 24*time.Hour)
+	s.cache.IncrBy(ctx, severityKey, 1)
 	
 	// Update IP-based counters
 	ipKey := fmt.Sprintf("security_metrics:ip:%s", event.SourceIP)
-	s.cache.IncrementCounter(ipKey, 1, 24*time.Hour)
+	s.cache.IncrBy(ctx, ipKey, 1)
 }
 
 func (s *securityAuditService) trackFailedLoginAttempts(ctx context.Context, sourceIP, email string) {
 	// Track by IP
 	ipKey := fmt.Sprintf("failed_login:ip:%s", sourceIP)
-	count, _ := s.cache.IncrementCounter(ipKey, 1, time.Hour)
+	count, _ := s.cache.IncrBy(ctx, ipKey, 1)
 	
 	// Track by email
 	emailKey := fmt.Sprintf("failed_login:email:%s", email)
-	s.cache.IncrementCounter(emailKey, 1, time.Hour)
+	s.cache.IncrBy(ctx, emailKey, 1)
 	
 	// If too many failed attempts, consider blocking
 	if count > 10 {
@@ -345,11 +339,11 @@ func (s *securityAuditService) trackFailedLoginAttempts(ctx context.Context, sou
 
 func (s *securityAuditService) trackRateLimitViolations(ctx context.Context, sourceIP string) {
 	key := fmt.Sprintf("rate_limit_violations:ip:%s", sourceIP)
-	count, _ := s.cache.IncrementCounter(key, 1, time.Hour)
+	count, _ := s.cache.IncrBy(ctx, key, 1)
 	
 	// Update global counter
 	globalKey := "security_metrics:rate_limit_violations_per_hour"
-	s.cache.IncrementCounter(globalKey, 1, time.Hour)
+	s.cache.IncrBy(ctx, globalKey, 1)
 	
 	if count > 50 { // More than 50 violations per hour from single IP
 		s.logger.WithFields(logrus.Fields{
@@ -361,10 +355,10 @@ func (s *securityAuditService) trackRateLimitViolations(ctx context.Context, sou
 
 func (s *securityAuditService) updateIPRiskScore(ctx context.Context, sourceIP string, riskScore int) {
 	key := fmt.Sprintf("ip_risk_score:%s", sourceIP)
-	currentScore, _ := s.cache.GetCounter(ctx, key)
+	currentScore, _ := s.getCounterValue(ctx, key)
 	newScore := currentScore + int64(riskScore)
 	
-	s.cache.SetCounter(ctx, key, newScore, 24*time.Hour)
+	s.cache.Set(ctx, key, fmt.Sprintf("%d", newScore), 24*time.Hour)
 	
 	if newScore > 100 { // High risk threshold
 		s.logger.WithFields(logrus.Fields{
@@ -389,7 +383,7 @@ func (s *securityAuditService) checkAndTriggerAlerts(ctx context.Context, event 
 	
 	// Count events per IP to detect patterns
 	ipEventKey := fmt.Sprintf("security_events:ip:%s:count", event.SourceIP)
-	count, _ := s.cache.IncrementCounter(ipEventKey, 1, time.Hour)
+	count, _ := s.cache.IncrBy(ctx, ipEventKey, 1)
 	
 	if count > 20 { // More than 20 security events per hour from single IP
 		s.logger.WithFields(logrus.Fields{
@@ -397,6 +391,26 @@ func (s *securityAuditService) checkAndTriggerAlerts(ctx context.Context, event 
 			"count":     count,
 		}).Error("IP generating excessive security events")
 	}
+}
+
+// getCounterValue is a helper method to get counter values from cache
+func (s *securityAuditService) getCounterValue(ctx context.Context, key string) (int64, error) {
+	// Try to get the value from cache
+	val, err := s.cache.Get(ctx, key)
+	if err != nil {
+		return 0, err
+	}
+	
+	// Convert string to int64
+	var count int64
+	if val != "" {
+		_, err = fmt.Sscanf(val, "%d", &count)
+		if err != nil {
+			return 0, err
+		}
+	}
+	
+	return count, nil
 }
 
 func (s *securityAuditService) getTopAttackers(ctx context.Context, limit int) []domain.AttackerInfo {

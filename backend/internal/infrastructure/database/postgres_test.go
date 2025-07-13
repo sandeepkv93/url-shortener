@@ -132,7 +132,7 @@ func (suite *DatabaseTestSuite) TestCreateShortURL() {
 	shortURL := &domain.ShortURL{
 		ShortCode:   "test123",
 		OriginalURL: "https://example.com",
-		UserID:      &user.ID,
+		UserID:      user.ID,
 		IsActive:    true,
 	}
 
@@ -160,7 +160,7 @@ func (suite *DatabaseTestSuite) TestCreateClick() {
 	shortURL := &domain.ShortURL{
 		ShortCode:   "test123",
 		OriginalURL: "https://example.com",
-		UserID:      &user.ID,
+		UserID:      user.ID,
 		IsActive:    true,
 	}
 	err = suite.db.DB.Create(shortURL).Error
@@ -218,7 +218,7 @@ func (suite *DatabaseTestSuite) TestUniqueConstraints() {
 	shortURL1 := &domain.ShortURL{
 		ShortCode:   "unique123",
 		OriginalURL: "https://example.com",
-		UserID:      &user1.ID,
+		UserID:      user1.ID,
 	}
 	err = suite.db.DB.Create(shortURL1).Error
 	suite.NoError(err)
@@ -226,7 +226,7 @@ func (suite *DatabaseTestSuite) TestUniqueConstraints() {
 	shortURL2 := &domain.ShortURL{
 		ShortCode:   "unique123", // Same short code
 		OriginalURL: "https://different.com",
-		UserID:      &user1.ID,
+		UserID:      user1.ID,
 	}
 	err = suite.db.DB.Create(shortURL2).Error
 	suite.Error(err, "Creating short URL with duplicate code should fail")

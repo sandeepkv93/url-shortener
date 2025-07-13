@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"runtime"
 	"time"
@@ -256,8 +255,8 @@ func (h *HealthService) checkCache(ctx context.Context) *domain.ComponentHealth 
 	}
 
 	// Test GET operation
-	var retrieved string
-	if err := h.cacheService.Get(ctx, testKey, &retrieved); err != nil {
+	retrieved, err := h.cacheService.Get(ctx, testKey)
+	if err != nil {
 		health.Status = "down"
 		health.Message = fmt.Sprintf("Cache GET operation failed: %v", err)
 		health.Duration = time.Since(start)
@@ -265,7 +264,7 @@ func (h *HealthService) checkCache(ctx context.Context) *domain.ComponentHealth 
 	}
 
 	// Test DELETE operation
-	if err := h.cacheService.Delete(ctx, testKey); err != nil {
+	if err := h.cacheService.Del(ctx, testKey); err != nil {
 		health.Status = "degraded"
 		health.Message = fmt.Sprintf("Cache DELETE operation failed: %v", err)
 	}
@@ -476,7 +475,7 @@ func (h *HealthService) runCacheConnectivityCheck(ctx context.Context) *domain.H
 		check.Status = "fail"
 		check.Message = fmt.Sprintf("Cache connectivity test failed: %v", err)
 	} else {
-		h.cacheService.Delete(ctx, testKey) // Clean up
+		h.cacheService.Del(ctx, testKey) // Clean up
 	}
 
 	check.Duration = time.Since(start)
@@ -517,11 +516,18 @@ func (h *HealthService) runCachePerformanceCheck(ctx context.Context) *domain.He
 		return check
 	}
 
-	var retrieved string
-	err = h.cacheService.Get(ctx, testKey, &retrieved)
+	retrieved, err := h.cacheService.Get(ctx, testKey)
 	if err != nil {
 		check.Status = "fail"
 		check.Message = fmt.Sprintf("Cache GET performance test failed: %v", err)
+		check.Duration = time.Since(start)
+		return check
+	}
+	
+	// Verify the retrieved value matches what we set
+	if retrieved != testValue {
+		check.Status = "fail"
+		check.Message = "Cache GET operation returned incorrect value"
 		check.Duration = time.Since(start)
 		return check
 	}
@@ -532,7 +538,7 @@ func (h *HealthService) runCachePerformanceCheck(ctx context.Context) *domain.He
 		check.Message = fmt.Sprintf("Slow cache operations detected: %v", opDuration)
 	}
 
-	h.cacheService.Delete(ctx, testKey) // Clean up
+	h.cacheService.Del(ctx, testKey) // Clean up
 
 	check.Duration = time.Since(start)
 	return check

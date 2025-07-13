@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -333,13 +332,13 @@ func (ms *MigrationService) CreateBackup(ctx context.Context) (*BackupInfo, erro
 	backupPath := filepath.Join(backupDir, filename)
 	
 	// Use pg_dump to create backup
-	sqlDB, err := ms.db.DB()
+	_, err := ms.db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
 	}
 	
 	// For now, create a simple backup structure
-	// In production, you would use pg_dump or similar tools
+	// In production, you would use pg_dump or similar tools with the sql.DB connection
 	backupContent := fmt.Sprintf("-- Database backup created at %s\n", time.Now().Format(time.RFC3339))
 	backupContent += fmt.Sprintf("-- Pre-migration version: %s\n\n", currentVersion)
 	
@@ -494,7 +493,6 @@ func (ms *MigrationService) compareVersions(v1, v2 string) int {
 }
 
 func (ms *MigrationService) getPendingMigrations(migrations []Migration) ([]Migration, error) {
-	var appliedVersions []string
 	var appliedMigrations []MigrationRecord
 	
 	if err := ms.db.Select("version").Find(&appliedMigrations).Error; err != nil {

@@ -39,6 +39,7 @@ type UserResponse struct {
 	LastName  string    `json:"last_name"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type UpdateUserRequest struct {
@@ -135,6 +136,7 @@ func (u *User) ToResponse() *UserResponse {
 		LastName:  u.LastName,
 		IsActive:  u.IsActive,
 		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
 	}
 }
 

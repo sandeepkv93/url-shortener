@@ -28,15 +28,20 @@ type Click struct {
 }
 
 type ClickStats struct {
-	TotalClicks  int64                    `json:"total_clicks"`
-	UniqueClicks int64                    `json:"unique_clicks"`
-	ClicksByDate map[string]int64         `json:"clicks_by_date"`
-	ClicksByTime map[int]int64            `json:"clicks_by_time"`
-	TopCountries []CountryStat           `json:"top_countries"`
-	TopDevices   []DeviceStat            `json:"top_devices"`
-	TopBrowsers  []BrowserStat           `json:"top_browsers"`
-	TopReferers  []RefererStat           `json:"top_referers"`
-	RecentClicks []RecentClickStat       `json:"recent_clicks"`
+	ShortURLID     uint                     `json:"short_url_id"`
+	TotalClicks    int64                    `json:"total_clicks"`
+	UniqueClicks   int64                    `json:"unique_clicks"`
+	UniqueVisitors int64                    `json:"unique_visitors"`
+	StartDate      *time.Time               `json:"start_date,omitempty"`
+	EndDate        *time.Time               `json:"end_date,omitempty"`
+	ClicksByDate   map[string]int64         `json:"clicks_by_date"`
+	ClicksByTime   map[int]int64            `json:"clicks_by_time"`
+	ClicksByHour   map[int]int64            `json:"clicks_by_hour"`
+	TopCountries   []CountryStat            `json:"top_countries"`
+	TopDevices     []DeviceStat             `json:"top_devices"`
+	TopBrowsers    []BrowserStat            `json:"top_browsers"`
+	TopReferers    []RefererStat            `json:"top_referers"`
+	RecentClicks   []RecentClickStat        `json:"recent_clicks"`
 }
 
 type CountryStat struct {
@@ -104,13 +109,14 @@ type TimelineStats struct {
 }
 
 type GlobalStats struct {
-	TotalURLs       int64 `json:"total_urls"`
-	TotalClicks     int64 `json:"total_clicks"`
-	TotalUsers      int64 `json:"total_users"`
-	ActiveURLs      int64 `json:"active_urls"`
-	ClicksToday     int64 `json:"clicks_today"`
+	TotalURLs        int64 `json:"total_urls"`
+	TotalClicks      int64 `json:"total_clicks"`
+	TotalUsers       int64 `json:"total_users"`
+	ActiveURLs       int64 `json:"active_urls"`
+	ClicksToday      int64 `json:"clicks_today"`
 	URLsCreatedToday int64 `json:"urls_created_today"`
-	NewUsersToday   int64 `json:"new_users_today"`
+	NewUsersToday    int64 `json:"new_users_today"`
+	UniqueVisitors   int64 `json:"unique_visitors"`
 }
 
 type UserDashboard struct {

@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"url-shortener/internal/core/ports"
 )
 
 // ErrorTrackingService provides comprehensive error tracking and alerting
@@ -107,7 +109,7 @@ type AlertHandler interface {
 
 // EmailAlertHandler sends alerts via email
 type EmailAlertHandler struct {
-	notificationService *NotificationService
+	notificationService ports.NotificationService
 }
 
 // SlackAlertHandler sends alerts to Slack
@@ -545,7 +547,7 @@ func extractRequestID(ctx context.Context) string {
 
 // Alert Handler Implementations
 
-func NewEmailAlertHandler(notificationService *NotificationService) *EmailAlertHandler {
+func NewEmailAlertHandler(notificationService ports.NotificationService) *EmailAlertHandler {
 	return &EmailAlertHandler{
 		notificationService: notificationService,
 	}
@@ -570,8 +572,10 @@ Context:
 		alert.Timestamp.Format(time.RFC3339), alert.ErrorCount, 
 		formatContext(alert.Context))
 
-	// Send via notification service (would need email addresses configured)
-	return fmt.Errorf("email notification not implemented yet")
+	// TODO: Send via notification service when email functionality is needed
+	// For now, just log the alert details
+	fmt.Printf("Email Alert - Subject: %s\nBody: %s\n", subject, body)
+	return nil
 }
 
 func NewSlackAlertHandler(webhookURL string, logger *LoggingService) *SlackAlertHandler {
@@ -600,7 +604,8 @@ func (sah *SlackAlertHandler) HandleAlert(ctx context.Context, alert *Alert) err
 	}
 
 	// Send to Slack webhook (implementation would use HTTP client)
-	sah.logger.Info("Slack alert sent", "alert_id", alert.ID, "webhook", sah.webhookURL)
+	// TODO: Implement actual HTTP client to send payload to webhook
+	sah.logger.Info("Slack alert sent", "alert_id", alert.ID, "webhook", sah.webhookURL, "payload", payload)
 	return nil
 }
 

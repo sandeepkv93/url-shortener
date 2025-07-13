@@ -153,7 +153,7 @@ func (s *analyticsService) GetTopPerformingURLs(ctx context.Context, userID uint
 		}
 
 		performance := &domain.URLPerformance{
-			ShortURL:     url,
+			ShortURL:     url.ShortCode,
 			TotalClicks:  totalClicks,
 			UniqueClicks: uniqueClicks,
 			ClickRate:    s.calculateClickRate(totalClicks, uniqueClicks),
@@ -208,9 +208,26 @@ func (s *analyticsService) GetDeviceStats(ctx context.Context, shortURLID uint, 
 		return nil, fmt.Errorf("failed to get click stats: %w", err)
 	}
 
+	// Convert to the expected format
+	topDevices := make([]map[string]interface{}, len(clickStats.TopDevices))
+	for i, device := range clickStats.TopDevices {
+		topDevices[i] = map[string]interface{}{
+			"device": device.Device,
+			"count":  device.Count,
+		}
+	}
+
+	topBrowsers := make([]map[string]interface{}, len(clickStats.TopBrowsers))
+	for i, browser := range clickStats.TopBrowsers {
+		topBrowsers[i] = map[string]interface{}{
+			"browser": browser.Browser,
+			"count":   browser.Count,
+		}
+	}
+
 	return &domain.DeviceStats{
-		TopDevices:  clickStats.TopDevices,
-		TopBrowsers: clickStats.TopBrowsers,
+		TopDevices:  topDevices,
+		TopBrowsers: topBrowsers,
 	}, nil
 }
 

@@ -101,7 +101,7 @@ func (pm *ProxyMiddleware) processForwardedFor(r *http.Request) {
 	originalIP := strings.TrimSpace(ips[0])
 	if originalIP != "" && pm.isValidIP(originalIP) {
 		// Update RemoteAddr to reflect the original client IP
-		host, port, err := net.SplitHostPort(r.RemoteAddr)
+		_, port, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			// If no port, just use the original IP
 			r.RemoteAddr = originalIP
@@ -126,7 +126,7 @@ func (pm *ProxyMiddleware) processRealIP(r *http.Request) {
 	
 	if pm.isValidIP(realIP) {
 		// X-Real-IP takes precedence over X-Forwarded-For
-		host, port, err := net.SplitHostPort(r.RemoteAddr)
+		_, port, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			r.RemoteAddr = realIP
 		} else {

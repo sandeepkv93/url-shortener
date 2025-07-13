@@ -6,7 +6,7 @@ import "time"
 type URLStats struct {
 	ShortCode      string     `json:"short_code"`
 	URL            *ShortURL  `json:"url"`
-	TotalClicks    uint       `json:"total_clicks"`
+	TotalClicks    int64      `json:"total_clicks"`
 	ClicksInRange  int64      `json:"clicks_in_range"`
 	UniqueVisitors int64      `json:"unique_visitors"`
 	StartDate      time.Time  `json:"start_date"`
@@ -17,9 +17,11 @@ type URLStats struct {
 
 // DeviceStats represents device and browser statistics
 type DeviceStats struct {
-	ShortURLID  uint              `json:"short_url_id"`
-	DeviceTypes map[string]int64  `json:"device_types"`
-	Browsers    map[string]int64  `json:"browsers"`
+	ShortURLID  uint                      `json:"short_url_id"`
+	DeviceTypes map[string]int64          `json:"device_types"`
+	Browsers    map[string]int64          `json:"browsers"`
+	TopDevices  []map[string]interface{}  `json:"top_devices"`
+	TopBrowsers []map[string]interface{}  `json:"top_browsers"`
 }
 
 // ReferrerStats represents referrer statistics
@@ -40,11 +42,12 @@ type ClickHeatmap struct {
 
 // URLPerformance represents URL performance metrics
 type URLPerformance struct {
-	ShortCode      string `json:"short_code" gorm:"column:short_code"`
+	ShortURL       string `json:"short_url" gorm:"column:short_code"`
 	OriginalURL    string `json:"original_url" gorm:"column:original_url"`
 	Title          string `json:"title" gorm:"column:title"`
-	ClickCount     int64  `json:"click_count" gorm:"column:click_count"`
-	UniqueVisitors int64  `json:"unique_visitors" gorm:"column:unique_visitors"`
+	TotalClicks    int64  `json:"total_clicks" gorm:"column:click_count"`
+	UniqueClicks   int64  `json:"unique_clicks" gorm:"column:unique_visitors"`
+	ClickRate      float64 `json:"click_rate"`
 }
 
 // RealtimeStats represents real-time application statistics

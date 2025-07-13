@@ -47,10 +47,7 @@ func main() {
 	}
 
 	// Initialize logger
-	logger := services.NewLoggingService(&services.LoggingConfig{
-		Level:  cfg.Logging.Level,
-		Format: cfg.Logging.Format,
-	})
+	logger := services.NewLoggingService("migration-service", "1.0.0", "production")
 
 	// Connect to database
 	db, err := database.NewPostgresConnection(cfg)
