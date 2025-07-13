@@ -156,6 +156,7 @@ type ProductionConfig struct {
 	EnableHealthEndpoints   bool
 	EnableMetricsEndpoints  bool
 	EnableDebugEndpoints    bool
+	Optimization            *ProductionOptimization
 }
 
 // TLSConfig contains SSL/TLS configuration

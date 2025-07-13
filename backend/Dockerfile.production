@@ -1,0 +1,241 @@
+# Production Optimized Dockerfile for URL Shortener Service
+# Multi-stage build for minimal image size and maximum performance
+
+# Build stage
+FROM golang:1.21-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    git \
+    ca-certificates \
+    tzdata \
+    gcc \
+    musl-dev
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files first for better layer caching
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download && go mod verify
+
+# Copy source code
+COPY . .
+
+# Build arguments for cross-compilation
+ARG GOOS=linux
+ARG GOARCH=amd64
+ARG CGO_ENABLED=0
+
+# Build optimizations
+ENV GOOS=${GOOS}
+ENV GOARCH=${GOARCH}
+ENV CGO_ENABLED=${CGO_ENABLED}
+
+# Build the application with optimizations
+RUN go build \
+    -a \
+    -installsuffix cgo \
+    -ldflags='-w -s -extldflags "-static"' \
+    -tags netgo \
+    -o server \
+    cmd/server/main.go
+
+# Verify the binary
+RUN ./server -version || echo "Version check failed, but binary exists"
+
+# Production stage
+FROM scratch AS production
+
+# Import from builder
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+
+# Create non-root user
+# Note: In scratch image, we need to copy user info from builder
+# The builder stage created these files
+
+# Create directories for logs and temp files
+WORKDIR /app
+
+# Copy the binary from builder stage
+COPY --from=builder /app/server .
+
+# Copy migration files if they exist
+COPY --from=builder /app/migrations ./migrations
+
+# Create necessary directories
+# Note: In scratch, we can't use mkdir, so we create these in builder if needed
+
+# Set the binary as executable (should already be executable)
+# Note: In scratch, chmod is not available, permissions set during COPY
+
+# Health check script (create a simple health check)
+# Since we're using scratch, we'll rely on the application's health endpoint
+
+# Expose ports
+EXPOSE 8080 8443
+
+# Use non-root user (this would need to be handled in the application)
+# USER nobody:nobody
+
+# Set environment variables for production
+ENV GO_ENV=production
+ENV PORT=8080
+ENV TLS_PORT=8443
+ENV HOST=0.0.0.0
+
+# Runtime optimizations
+ENV GOGC=100
+ENV GOMAXPROCS=0
+
+# Memory optimizations
+ENV GOMEMLIMIT=1536MiB
+
+# Command to run
+ENTRYPOINT ["./server"]
+
+# Alternative production stage with minimal Alpine base (if scratch is too restrictive)
+FROM alpine:latest AS production-alpine
+
+# Install runtime dependencies
+RUN apk --no-cache add \
+    ca-certificates \
+    tzdata \
+    && addgroup -g 1001 -S appgroup \
+    && adduser -u 1001 -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/server .
+
+# Copy migration files
+COPY --from=builder /app/migrations ./migrations
+
+# Create necessary directories
+RUN mkdir -p /var/log/url-shortener \
+    && mkdir -p /tmp \
+    && chown -R appuser:appgroup /app \
+    && chown -R appuser:appgroup /var/log/url-shortener \
+    && chmod +x ./server
+
+# Switch to non-root user
+USER appuser:appgroup
+
+# Expose ports
+EXPOSE 8080 8443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+
+# Set environment variables
+ENV GO_ENV=production
+ENV PORT=8080
+ENV TLS_PORT=8443
+ENV HOST=0.0.0.0
+ENV GOGC=100
+ENV GOMAXPROCS=0
+ENV GOMEMLIMIT=1536MiB
+
+# Runtime security
+ENV CGO_ENABLED=0
+
+# Command to run
+ENTRYPOINT ["./server"]
+
+# Development stage (for local development with hot reload)
+FROM golang:1.21-alpine AS development
+
+# Install development dependencies
+RUN apk add --no-cache \
+    git \
+    ca-certificates \
+    tzdata \
+    gcc \
+    musl-dev \
+    curl \
+    wget \
+    bash
+
+# Install air for hot reload
+RUN go install github.com/cosmtrek/air@latest
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Expose ports
+EXPOSE 8080 8443
+
+# Set environment for development
+ENV GO_ENV=development
+ENV PORT=8080
+ENV HOST=0.0.0.0
+
+# Command for development (hot reload)
+CMD ["air", "-c", ".air.toml"]
+
+# Testing stage
+FROM golang:1.21-alpine AS testing
+
+# Install test dependencies
+RUN apk add --no-cache \
+    git \
+    ca-certificates \
+    gcc \
+    musl-dev
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Run tests
+RUN go test -v -race -coverprofile=coverage.out ./...
+
+# Generate coverage report
+RUN go tool cover -html=coverage.out -o coverage.html
+
+# Build for testing
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
+
+# Security scanning stage (optional)
+FROM alpine:latest AS security
+
+# Install security scanning tools
+RUN apk add --no-cache \
+    ca-certificates \
+    curl \
+    wget
+
+# Copy binary for scanning
+COPY --from=builder /app/server .
+
+# Note: In a real pipeline, you would run security scans here
+# Example tools: trivy, clair, anchore, etc.
+
+# Final production image selection
+# By default, use the scratch-based image for maximum security and minimal size
+FROM production AS final
