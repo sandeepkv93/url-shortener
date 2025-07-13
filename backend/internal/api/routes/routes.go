@@ -14,15 +14,16 @@ import (
 
 type Config struct {
 	// Handlers
-	AuthHandler      *handlers.AuthHandler
-	URLHandler       *handlers.URLHandler
-	AnalyticsHandler *handlers.AnalyticsHandler
-	QRHandler        *handlers.QRHandler
-	DocsHandler      *handlers.DocsHandler
-	HealthHandler    *handlers.HealthHandler
-	BIHandler        *handlers.BusinessIntelligenceHandler
-	FunnelHandler    *handlers.FunnelHandler
-	ReportingHandler *handlers.ReportingHandler
+	AuthHandler                   *handlers.AuthHandler
+	URLHandler                   *handlers.URLHandler
+	AnalyticsHandler             *handlers.AnalyticsHandler
+	QRHandler                    *handlers.QRHandler
+	DocsHandler                  *handlers.DocsHandler
+	HealthHandler                *handlers.HealthHandler
+	BIHandler                    *handlers.BusinessIntelligenceHandler
+	FunnelHandler                *handlers.FunnelHandler
+	ReportingHandler             *handlers.ReportingHandler
+	CompetitiveIntelligenceHandler *handlers.CompetitiveIntelligenceHandler
 	
 	// Middleware
 	AuthMiddleware     *middleware.AuthMiddleware
@@ -340,6 +341,31 @@ func (r *Router) setupV1Routes(apiRouter chi.Router) {
 		})
 	}
 	
+	// Competitive Intelligence routes
+	if r.config.CompetitiveIntelligenceHandler != nil && r.config.AuthMiddleware != nil {
+		apiRouter.Route("/competitive", func(competitiveRouter chi.Router) {
+			competitiveRouter.Use(r.config.AuthMiddleware.RequireAuth)
+			
+			// Market analysis
+			competitiveRouter.Get("/market-position", r.config.CompetitiveIntelligenceHandler.GetMarketPosition)
+			competitiveRouter.Get("/competitors/{competitorId}", r.config.CompetitiveIntelligenceHandler.GetCompetitorData)
+			competitiveRouter.Get("/market-trends", r.config.CompetitiveIntelligenceHandler.GetMarketTrends)
+			
+			// Benchmarking
+			competitiveRouter.Get("/benchmarks", r.config.CompetitiveIntelligenceHandler.GetIndustryBenchmarks)
+			competitiveRouter.Get("/compare/{competitorId}", r.config.CompetitiveIntelligenceHandler.ComparePerformance)
+			competitiveRouter.Get("/performance-gaps", r.config.CompetitiveIntelligenceHandler.GetPerformanceGaps)
+			
+			// Opportunity identification
+			competitiveRouter.Get("/opportunities", r.config.CompetitiveIntelligenceHandler.GetMarketOpportunities)
+			competitiveRouter.Get("/competitors/{competitorId}/weaknesses", r.config.CompetitiveIntelligenceHandler.GetCompetitorWeaknesses)
+			competitiveRouter.Get("/trends", r.config.CompetitiveIntelligenceHandler.GetEmergingTrends)
+			
+			// Overview and insights
+			competitiveRouter.Get("/overview", r.config.CompetitiveIntelligenceHandler.GetCompetitiveOverview)
+		})
+	}
+	
 	// Admin routes (future expansion)
 	if r.config.AuthMiddleware != nil && r.config.AnalyticsHandler != nil {
 		apiRouter.Route("/admin", func(adminRouter chi.Router) {
@@ -441,6 +467,11 @@ func (b *RouterBuilder) WithFunnelHandler(handler *handlers.FunnelHandler) *Rout
 
 func (b *RouterBuilder) WithReportingHandler(handler *handlers.ReportingHandler) *RouterBuilder {
 	b.config.ReportingHandler = handler
+	return b
+}
+
+func (b *RouterBuilder) WithCompetitiveIntelligenceHandler(handler *handlers.CompetitiveIntelligenceHandler) *RouterBuilder {
+	b.config.CompetitiveIntelligenceHandler = handler
 	return b
 }
 
