@@ -252,15 +252,15 @@ func (suite *AnalyticsHandlerTestSuite) TestGetGeographicStats_Success() {
 func (suite *AnalyticsHandlerTestSuite) TestGetDeviceStats_Success() {
 	// Setup
 	deviceStats := &domain.DeviceStats{
-		TopDevices: []domain.DeviceStat{
-			{Device: "Desktop", Count: 300},
-			{Device: "Mobile", Count: 200},
-			{Device: "Tablet", Count: 50},
+		TopDevices: []map[string]interface{}{
+			{"device": "Desktop", "count": 300},
+			{"device": "Mobile", "count": 200},
+			{"device": "Tablet", "count": 50},
 		},
-		TopBrowsers: []domain.BrowserStat{
-			{Browser: "Chrome", Count: 250},
-			{Browser: "Firefox", Count: 150},
-			{Browser: "Safari", Count: 100},
+		TopBrowsers: []map[string]interface{}{
+			{"browser": "Chrome", "count": 250},
+			{"browser": "Firefox", "count": 150},
+			{"browser": "Safari", "count": 100},
 		},
 	}
 
@@ -290,7 +290,7 @@ func (suite *AnalyticsHandlerTestSuite) TestGetDeviceStats_Success() {
 	err := json.NewDecoder(rr.Body).Decode(&response)
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), response.TopDevices, 3)
-	assert.Equal(suite.T(), deviceStats.TopDevices[0].Device, response.TopDevices[0].Device)
+	assert.Equal(suite.T(), deviceStats.TopDevices[0]["device"], response.TopDevices[0]["device"])
 	
 	suite.mockAnalyticsService.AssertExpectations(suite.T())
 }
@@ -338,13 +338,15 @@ func (suite *AnalyticsHandlerTestSuite) TestGetTopPerformingURLs_Success() {
 	// Setup
 	topURLs := []*domain.URLPerformance{
 		{
-			ShortURL:     &domain.ShortURL{ShortCode: "test123", OriginalURL: "https://example.com"},
+			ShortURL:     "test123",
+			OriginalURL:  "https://example.com",
 			TotalClicks:  1000,
 			UniqueClicks: 500,
 			ClickRate:    50.0,
 		},
 		{
-			ShortURL:     &domain.ShortURL{ShortCode: "test456", OriginalURL: "https://example.org"},
+			ShortURL:     "test456",
+			OriginalURL:  "https://example.org",
 			TotalClicks:  800,
 			UniqueClicks: 400,
 			ClickRate:    40.0,
@@ -373,7 +375,7 @@ func (suite *AnalyticsHandlerTestSuite) TestGetTopPerformingURLs_Success() {
 	err := json.NewDecoder(rr.Body).Decode(&response)
 	assert.NoError(suite.T(), err)
 	assert.Len(suite.T(), response, 2)
-	assert.Equal(suite.T(), topURLs[0].ShortURL.ShortCode, response[0].ShortURL.ShortCode)
+	assert.Equal(suite.T(), topURLs[0].ShortURL, response[0].ShortURL)
 	
 	suite.mockAnalyticsService.AssertExpectations(suite.T())
 }
