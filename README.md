@@ -11,6 +11,7 @@ A production-grade URL shortener service built with Go and React, featuring comp
 ## 🚀 Features
 
 ### Core Features
+
 - **URL Shortening**: Create short, memorable links from long URLs
 - **Custom Aliases**: Support for custom short codes and vanity URLs
 - **QR Code Generation**: Generate QR codes for shortened URLs in multiple formats (PNG, SVG, PDF)
@@ -19,6 +20,7 @@ A production-grade URL shortener service built with Go and React, featuring comp
 - **Bulk Operations**: Import/export URLs in bulk
 
 ### Analytics & Reporting
+
 - **Real-time Analytics**: Live click tracking and statistics
 - **Geographic Analytics**: Location-based click analysis with interactive maps
 - **Device Analytics**: Track clicks by device type, browser, and operating system
@@ -27,12 +29,14 @@ A production-grade URL shortener service built with Go and React, featuring comp
 - **Export Capabilities**: Export analytics data in JSON, CSV, and Excel formats
 
 ### User Management
+
 - **JWT Authentication**: Secure token-based authentication with refresh tokens
 - **User Profiles**: Comprehensive profile management with preferences
 - **Dashboard**: Interactive dashboard with URL management and analytics
 - **Role-based Access**: Support for different user roles and permissions
 
 ### Advanced Features
+
 - **Health Monitoring**: Comprehensive system health checks and metrics
 - **Rate Limiting**: Intelligent API rate limiting and abuse prevention
 - **Caching**: Multi-layer Redis-based caching for optimal performance
@@ -43,19 +47,23 @@ A production-grade URL shortener service built with Go and React, featuring comp
 ## 📚 Documentation
 
 ### Quick Start
+
 - **[Developer Onboarding Guide](docs/developer-onboarding.md)** - Complete guide for new developers
 - **[Production Deployment Guide](docs/production-deployment.md)** - Comprehensive production deployment and operations
 
 ### API Documentation
+
 - **[Interactive API Documentation](http://localhost:8080/docs)** - Swagger UI (when running)
 - **[OpenAPI Specification](docs/api/openapi.yaml)** - Complete API specification
 - **[API Client Examples](docs/api/examples/)** - Client examples in multiple languages
 
 ### Operations and Monitoring
+
 - **[Health Check Documentation](docs/health-checks.md)** - Health monitoring and diagnostics
 - **[Automation Scripts Guide](scripts/README.md)** - Deployment and maintenance automation
 
 ### Development
+
 - **[Project Progress](PROGRESS.md)** - Development progress and milestones
 - **[Environment Setup](docs/developer-onboarding.md#development-environment-setup)** - Detailed setup instructions
 
@@ -107,6 +115,7 @@ backend/
 ## 🛠️ Technology Stack
 
 ### Backend Technologies
+
 - **Language**: Go 1.21+ with modern Go features
 - **Framework**: Chi Router v5 - Lightweight, fast HTTP router
 - **Database**: PostgreSQL 15+ with GORM ORM
@@ -117,6 +126,7 @@ backend/
 - **Security**: Comprehensive security middleware
 
 ### Frontend Technologies
+
 - **Framework**: React 18 with TypeScript 5.0+
 - **Build Tool**: Vite for fast development and optimized builds
 - **State Management**: React Context API with useReducer
@@ -127,6 +137,7 @@ backend/
 - **Testing**: Vitest + React Testing Library
 
 ### Infrastructure & DevOps
+
 - **Containerization**: Docker & Docker Compose with multi-stage builds
 - **Task Automation**: Task runner (Taskfile) for development workflows
 - **Monitoring**: Prometheus metrics + Grafana dashboards
@@ -137,6 +148,7 @@ backend/
 ## 📋 Prerequisites
 
 ### Required Software
+
 - **Go** 1.21 or higher
 - **Node.js** 18 or higher with npm 9+
 - **PostgreSQL** 15+ (or use Docker)
@@ -144,6 +156,7 @@ backend/
 - **Docker** 20.10+ & **Docker Compose** 2.0+ (recommended)
 
 ### System Requirements
+
 - **OS**: Linux, macOS, or Windows with WSL2
 - **RAM**: 8GB minimum, 16GB recommended
 - **Storage**: 10GB free space for development
@@ -263,6 +276,7 @@ url-shortener/
 ### Environment Variables
 
 **Backend Configuration** (`.env`):
+
 ```env
 # Application Settings
 APP_ENV=development
@@ -300,6 +314,7 @@ GEOLOCATION_API_KEY=your_api_key
 ```
 
 **Frontend Configuration** (`.env`):
+
 ```env
 VITE_API_BASE_URL=http://localhost:8080/api/v1
 VITE_APP_NAME=URL Shortener
@@ -315,6 +330,7 @@ For complete configuration details, see the [Developer Onboarding Guide](docs/de
 We maintain **95%+ test coverage** across all components:
 
 #### Backend Tests
+
 ```bash
 # Run all backend tests
 cd backend && go test ./... -v
@@ -329,6 +345,7 @@ go test ./internal/api/handlers/... -v
 ```
 
 #### Frontend Tests
+
 ```bash
 # Run all frontend tests
 cd frontend && npm test
@@ -341,6 +358,7 @@ npm run test:watch
 ```
 
 #### Automated Testing
+
 ```bash
 # Run all tests with automation script
 ./scripts/test.sh all
@@ -375,6 +393,7 @@ For detailed testing procedures, see the [Developer Onboarding Guide](docs/devel
 **Live API Documentation**: http://localhost:8080/docs (when running)
 
 The service provides comprehensive API documentation with:
+
 - **Interactive Testing**: Try API endpoints directly from the browser
 - **Authentication Guide**: Complete authentication flow examples
 - **Request/Response Examples**: Real examples for all endpoints
@@ -383,52 +402,58 @@ The service provides comprehensive API documentation with:
 ### API Overview
 
 #### Authentication Endpoints
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/api/v1/auth/register` | Register new user | ❌ |
-| `POST` | `/api/v1/auth/login` | User login | ❌ |
-| `POST` | `/api/v1/auth/refresh` | Refresh JWT token | ❌ |
-| `GET` | `/api/v1/auth/profile` | Get user profile | ✅ |
-| `PUT` | `/api/v1/auth/profile` | Update user profile | ✅ |
-| `POST` | `/api/v1/auth/logout` | User logout | ✅ |
+
+| Method | Endpoint                | Description         | Auth Required |
+| ------ | ----------------------- | ------------------- | ------------- |
+| `POST` | `/api/v1/auth/register` | Register new user   | ❌            |
+| `POST` | `/api/v1/auth/login`    | User login          | ❌            |
+| `POST` | `/api/v1/auth/refresh`  | Refresh JWT token   | ❌            |
+| `GET`  | `/api/v1/auth/profile`  | Get user profile    | ✅            |
+| `PUT`  | `/api/v1/auth/profile`  | Update user profile | ✅            |
+| `POST` | `/api/v1/auth/logout`   | User logout         | ✅            |
 
 #### URL Management Endpoints
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/api/v1/urls` | Create short URL | ✅ |
-| `GET` | `/api/v1/urls` | List user URLs | ✅ |
-| `GET` | `/api/v1/urls/{id}` | Get URL details | ✅ |
-| `PUT` | `/api/v1/urls/{id}` | Update URL | ✅ |
-| `DELETE` | `/api/v1/urls/{id}` | Delete URL | ✅ |
-| `GET` | `/{shortCode}` | Redirect to original URL | ❌ |
+
+| Method   | Endpoint            | Description              | Auth Required |
+| -------- | ------------------- | ------------------------ | ------------- |
+| `POST`   | `/api/v1/urls`      | Create short URL         | ✅            |
+| `GET`    | `/api/v1/urls`      | List user URLs           | ✅            |
+| `GET`    | `/api/v1/urls/{id}` | Get URL details          | ✅            |
+| `PUT`    | `/api/v1/urls/{id}` | Update URL               | ✅            |
+| `DELETE` | `/api/v1/urls/{id}` | Delete URL               | ✅            |
+| `GET`    | `/{shortCode}`      | Redirect to original URL | ❌            |
 
 #### Analytics Endpoints
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/v1/analytics/dashboard` | Dashboard statistics | ✅ |
-| `GET` | `/api/v1/analytics/urls/{id}` | URL-specific analytics | ✅ |
-| `GET` | `/api/v1/analytics/urls/{id}/timeline` | Click timeline | ✅ |
-| `GET` | `/api/v1/analytics/urls/{id}/geo` | Geographic statistics | ✅ |
-| `GET` | `/api/v1/analytics/export` | Export analytics data | ✅ |
+
+| Method | Endpoint                               | Description            | Auth Required |
+| ------ | -------------------------------------- | ---------------------- | ------------- |
+| `GET`  | `/api/v1/analytics/dashboard`          | Dashboard statistics   | ✅            |
+| `GET`  | `/api/v1/analytics/urls/{id}`          | URL-specific analytics | ✅            |
+| `GET`  | `/api/v1/analytics/urls/{id}/timeline` | Click timeline         | ✅            |
+| `GET`  | `/api/v1/analytics/urls/{id}/geo`      | Geographic statistics  | ✅            |
+| `GET`  | `/api/v1/analytics/export`             | Export analytics data  | ✅            |
 
 #### QR Code Endpoints
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/api/v1/qr/generate` | Generate QR code | Optional |
-| `GET` | `/api/v1/qr/{shortCode}` | Get QR code for URL | ❌ |
-| `GET` | `/api/v1/qr/formats` | Available QR formats | ❌ |
+
+| Method | Endpoint                 | Description          | Auth Required |
+| ------ | ------------------------ | -------------------- | ------------- |
+| `POST` | `/api/v1/qr/generate`    | Generate QR code     | Optional      |
+| `GET`  | `/api/v1/qr/{shortCode}` | Get QR code for URL  | ❌            |
+| `GET`  | `/api/v1/qr/formats`     | Available QR formats | ❌            |
 
 #### Health & Monitoring Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Overall health status |
-| `GET` | `/health/livez` | Kubernetes liveness probe |
-| `GET` | `/health/readyz` | Kubernetes readiness probe |
-| `GET` | `/health/checks` | Detailed health checks |
-| `GET` | `/health/metrics/system` | System metrics |
-| `GET` | `/health/metrics/application` | Application metrics |
+
+| Method | Endpoint                      | Description                |
+| ------ | ----------------------------- | -------------------------- |
+| `GET`  | `/health`                     | Overall health status      |
+| `GET`  | `/health/livez`               | Kubernetes liveness probe  |
+| `GET`  | `/health/readyz`              | Kubernetes readiness probe |
+| `GET`  | `/health/checks`              | Detailed health checks     |
+| `GET`  | `/health/metrics/system`      | System metrics             |
+| `GET`  | `/health/metrics/application` | Application metrics        |
 
 For complete API documentation, see:
+
 - **[OpenAPI Specification](docs/api/openapi.yaml)**
 - **[API Client Examples](docs/api/examples/)**
 - **[Health Check Documentation](docs/health-checks.md)**
@@ -438,6 +463,7 @@ For complete API documentation, see:
 ### Development Workflow
 
 #### Daily Development Commands
+
 ```bash
 # Start development environment
 ./scripts/setup.sh dev
@@ -490,6 +516,7 @@ For complete development guidelines, see the [Developer Onboarding Guide](docs/d
 ### Production Deployment
 
 #### Automated Deployment (Recommended)
+
 ```bash
 # Deploy to production server
 ./scripts/deploy.sh --host your-server.com deploy
@@ -505,6 +532,7 @@ For complete development guidelines, see the [Developer Onboarding Guide](docs/d
 ```
 
 #### Manual Deployment
+
 ```bash
 # 1. Build production images
 docker-compose -f docker-compose.prod.yml build
@@ -532,6 +560,7 @@ For comprehensive deployment instructions, see the [Production Deployment Guide]
 ### Security Features
 
 #### Application Security
+
 - **Authentication**: JWT-based authentication with secure refresh tokens
 - **Authorization**: Role-based access control with granular permissions
 - **Input Validation**: Comprehensive input sanitization and validation
@@ -539,6 +568,7 @@ For comprehensive deployment instructions, see the [Production Deployment Guide]
 - **Session Management**: Secure session handling with automatic expiration
 
 #### Infrastructure Security
+
 - **HTTPS/TLS**: End-to-end encryption with modern TLS protocols
 - **CORS**: Configured Cross-Origin Resource Sharing
 - **Security Headers**: HSTS, XSS protection, content type sniffing prevention
@@ -546,6 +576,7 @@ For comprehensive deployment instructions, see the [Production Deployment Guide]
 - **XSS Protection**: Content Security Policy and output encoding
 
 #### Operational Security
+
 - **Environment Variables**: Secure secret management
 - **Container Security**: Non-root users, read-only filesystems
 - **Network Security**: Firewall configuration, VPC isolation
@@ -564,6 +595,7 @@ For comprehensive deployment instructions, see the [Production Deployment Guide]
 ### Performance Features
 
 #### Application Performance
+
 - **Caching**: Multi-layer Redis caching for optimal response times
 - **Database Optimization**: Proper indexing and query optimization
 - **Connection Pooling**: Efficient database connection management
@@ -571,6 +603,7 @@ For comprehensive deployment instructions, see the [Production Deployment Guide]
 - **CDN Integration**: Static asset optimization and delivery
 
 #### Monitoring & Observability
+
 - **Health Checks**: Comprehensive health monitoring system
 - **Metrics Collection**: Prometheus-compatible metrics
 - **Real-time Monitoring**: Live performance dashboards
@@ -602,12 +635,14 @@ For complete monitoring setup, see the [Health Check Documentation](docs/health-
 We welcome contributions! Please follow our contribution guidelines:
 
 ### Getting Started
+
 1. **Read the Documentation**: Start with the [Developer Onboarding Guide](docs/developer-onboarding.md)
 2. **Set up Development Environment**: Follow the setup instructions
 3. **Check Existing Issues**: Look for open issues or create new ones
 4. **Understand the Architecture**: Review the codebase structure
 
 ### Contribution Process
+
 1. **Fork** the repository
 2. **Create** a feature branch: `git checkout -b feature/your-feature`
 3. **Develop** your changes following our coding standards
@@ -654,60 +689,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **📊 Monitoring**: [Performance monitoring](docs/health-checks.md) and alerting setup
 - **🔐 Security**: Security best practices and vulnerability reporting
 
-## 🗺️ Roadmap
-
-### Current Development (Phase 1) ✅
-- [x] Core URL shortening functionality
-- [x] User authentication and management
-- [x] Basic analytics and reporting
-- [x] QR code generation
-- [x] Comprehensive API documentation
-- [x] Health monitoring system
-- [x] Production deployment automation
-
-### Upcoming Features (Phase 2) 🚧
-- [ ] Advanced analytics with machine learning insights
-- [ ] Team collaboration and workspace features
-- [ ] Custom domains support
-- [ ] Advanced security features (2FA, SSO)
-- [ ] API integrations (Slack, Discord, webhooks)
-- [ ] Mobile applications (iOS/Android)
-
-### Future Enhancements (Phase 3) 📅
-- [ ] Multi-language support (i18n)
-- [ ] Advanced caching strategies and CDN integration
-- [ ] Enterprise features (LDAP, audit logs)
-- [ ] AI-powered link optimization
-- [ ] Advanced reporting and business intelligence
-- [ ] White-label solutions
-
-## 📊 Current Status
-
-**Development Progress**: **83% Complete** (Step 25 of 30 completed)
-
-### Completed Milestones ✅
-- ✅ **Project Foundation** (Steps 1-10): Complete architecture and core services
-- ✅ **Frontend Development** (Steps 11-20): React application with full UI
-- ✅ **Integration & Testing** (Steps 21-25): Comprehensive testing and documentation
-
-### In Progress 🚧
-- 🚧 **Documentation & Deployment** (Steps 26-30): Production optimization and final polish
-
-### Recent Achievements 🎉
-- ✅ **Comprehensive Health Monitoring**: Multi-level health checks with Kubernetes support
-- ✅ **Interactive API Documentation**: Complete OpenAPI specification with Swagger UI
-- ✅ **Production Deployment Automation**: Automated deployment scripts with rollback
-- ✅ **Developer Onboarding Guide**: Complete documentation for new developers
-- ✅ **Security Hardening**: Enterprise-grade security implementation
-
-For detailed progress tracking, see [PROGRESS.md](PROGRESS.md).
-
----
-
 <div align="center">
 
 **🌟 Built with ❤️ using Go and React 🌟**
 
-[⭐ Star us on GitHub](https://github.com/your-org/url-shortener) | [🐛 Report Issue](https://github.com/your-org/url-shortener/issues) | [💡 Request Feature](https://github.com/your-org/url-shortener/discussions)
+[⭐ Star us on GitHub](https://github.com/sandeepkv93/url-shortener) | [🐛 Report Issue](https://github.com/sandeepkv93/url-shortener/issues) | [💡 Request Feature](https://github.com/sandeepkv93/url-shortener/discussions)
 
 </div>
