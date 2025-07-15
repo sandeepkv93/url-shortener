@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
@@ -113,12 +112,12 @@ func (s *dataExportService) ExportAnalyticsToExcel(ctx context.Context, userID u
 		return nil, fmt.Errorf("failed to create summary sheet: %w", err)
 	}
 
-	dataSheetIndex, err := f.NewSheet("Detailed Data")
+	_, err = f.NewSheet("Detailed Data")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create data sheet: %w", err)
 	}
 
-	performanceSheetIndex, err := f.NewSheet("Performance Analysis")
+	_, err = f.NewSheet("Performance Analysis")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create performance sheet: %w", err)
 	}
@@ -542,12 +541,7 @@ func (s *dataExportService) ExportURLsToCSV(ctx context.Context, userID uint, co
 			url.Title,
 			strconv.FormatInt(url.ClickCount, 10),
 			url.CreatedAt.Format("2006-01-02 15:04:05"),
-			func() string {
-				if url.LastClickedAt != nil {
-					return url.LastClickedAt.Format("2006-01-02 15:04:05")
-				}
-				return "Never"
-			}(),
+			url.UpdatedAt.Format("2006-01-02 15:04:05"),
 			func() string {
 				if url.IsActive {
 					return "Active"

@@ -194,5 +194,5 @@ export interface ReportingContextType {
   // UI state
   clearError: () => void
   setCurrentReport: (report: ScheduledReport | null) => void
-  setCurrentExport: (export: DataExport | null) => void
+  setCurrentExport: (exportData: DataExport | null) => void
 }

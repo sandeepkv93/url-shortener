@@ -114,6 +114,10 @@ func (r *urlRepository) GetByUserID(ctx context.Context, userID uint, offset, li
 	return urls, total, nil
 }
 
+func (r *urlRepository) GetUserURLs(ctx context.Context, userID uint, offset, limit int) ([]*domain.ShortURL, int64, error) {
+	return r.GetByUserID(ctx, userID, offset, limit)
+}
+
 func (r *urlRepository) GetActiveByShortCode(ctx context.Context, shortCode string) (*domain.ShortURL, error) {
 	var url domain.ShortURL
 	now := time.Now()

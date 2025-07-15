@@ -50,6 +50,12 @@ var (
 	// External service errors
 	ErrExternalService     = errors.New("external service error")
 	ErrGeolocationService  = errors.New("geolocation service error")
+	
+	// General errors
+	ErrNotFound           = errors.New("not found")
+	
+	// Domain-specific errors
+	NotFoundError         = errors.New("not found")
 )
 
 type DomainError struct {

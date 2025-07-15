@@ -29,14 +29,14 @@ func NewWebhookIntegrationService(
 func (s *WebhookIntegrationService) TriggerURLCreated(ctx context.Context, url *domain.ShortURL) {
 	s.triggerEventAsync(ctx, domain.WebhookEventURLCreated, map[string]interface{}{
 		"url": url,
-	}, url.UserID)
+	}, uint64(url.UserID))
 }
 
 func (s *WebhookIntegrationService) TriggerURLUpdated(ctx context.Context, url *domain.ShortURL, changes map[string]interface{}) {
 	s.triggerEventAsync(ctx, domain.WebhookEventURLUpdated, map[string]interface{}{
 		"url":     url,
 		"changes": changes,
-	}, url.UserID)
+	}, uint64(url.UserID))
 }
 
 func (s *WebhookIntegrationService) TriggerURLDeleted(ctx context.Context, url *domain.ShortURL) {
@@ -48,7 +48,7 @@ func (s *WebhookIntegrationService) TriggerURLDeleted(ctx context.Context, url *
 			"title":        url.Title,
 			"deleted_at":   time.Now(),
 		},
-	}, url.UserID)
+	}, uint64(url.UserID))
 }
 
 func (s *WebhookIntegrationService) TriggerURLClicked(ctx context.Context, url *domain.ShortURL, click *domain.Click) {
@@ -58,14 +58,14 @@ func (s *WebhookIntegrationService) TriggerURLClicked(ctx context.Context, url *
 		"stats": map[string]interface{}{
 			"total_clicks": url.ClickCount + 1,
 		},
-	}, url.UserID)
+	}, uint64(url.UserID))
 }
 
 func (s *WebhookIntegrationService) TriggerURLExpired(ctx context.Context, url *domain.ShortURL) {
 	s.triggerEventAsync(ctx, domain.WebhookEventURLExpired, map[string]interface{}{
 		"url": url,
 		"expired_at": time.Now(),
-	}, url.UserID)
+	}, uint64(url.UserID))
 }
 
 // Analytics Events

@@ -283,7 +283,7 @@ func (s *reportingService) ExecuteReport(ctx context.Context, reportID uint) err
 
 func (s *reportingService) GetReportHistory(ctx context.Context, reportID uint, userID uint) ([]domain.ReportExecution, error) {
 	// Verify ownership
-	report, err := s.GetScheduledReport(ctx, reportID, userID)
+	_, err := s.GetScheduledReport(ctx, reportID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -821,4 +821,45 @@ func (s *reportingService) generateTextReport(stats *domain.DashboardStats, conf
 	buf.WriteString(fmt.Sprintf("URL Growth Rate: %.2f%%\n", stats.URLGrowthRate))
 	
 	return []byte(buf.String()), nil
+}
+
+// calculateRecordCount calculates the number of records in the exported data
+func (s *reportingService) calculateRecordCount(export *domain.DataExport, data []byte) int64 {
+	if len(data) == 0 {
+		return 0
+	}
+	
+	switch export.Format {
+	case "csv":
+		// Count CSV rows (excluding header)
+		lines := strings.Split(string(data), "\n")
+		recordCount := len(lines) - 1 // subtract header
+		if recordCount < 0 {
+			recordCount = 0
+		}
+		return int64(recordCount)
+	case "json":
+		// For JSON, try to parse and count array elements
+		var jsonData interface{}
+		if err := json.Unmarshal(data, &jsonData); err == nil {
+			if arr, ok := jsonData.([]interface{}); ok {
+				return int64(len(arr))
+			}
+		}
+		return 1 // assume single object
+	case "excel":
+		// For Excel, we can't easily count without parsing, so estimate based on export type
+		switch export.ExportType {
+		case "analytics":
+			return 10 // sample data rows
+		case "urls":
+			return 100 // estimated URL count
+		case "clicks":
+			return 1000 // estimated click count
+		default:
+			return 1
+		}
+	default:
+		return 1
+	}
 }

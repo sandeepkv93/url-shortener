@@ -143,6 +143,17 @@ type ConfigService interface {
 	GetRedisURL() string
 }
 
+type Logger interface {
+	Info(msg string, fields ...interface{})
+	Error(msg string, fields ...interface{})
+	Warn(msg string, fields ...interface{})
+	Debug(msg string, fields ...interface{})
+	InfoContext(ctx context.Context, msg string, fields ...interface{})
+	ErrorContext(ctx context.Context, msg string, fields ...interface{})
+	WarnContext(ctx context.Context, msg string, fields ...interface{})
+	DebugContext(ctx context.Context, msg string, fields ...interface{})
+}
+
 type QRCodeProvider interface {
 	GenerateQRCode(url string, options domain.QRGenerationOptions) ([]byte, error)
 }

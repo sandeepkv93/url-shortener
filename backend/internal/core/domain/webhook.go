@@ -276,3 +276,59 @@ func ValidateWebhookEvents(events []WebhookEvent) error {
 	
 	return nil
 }
+
+// AnalyticsThreshold represents a threshold configuration for analytics alerts
+type AnalyticsThreshold struct {
+	ID             uint64    `json:"id" gorm:"primaryKey"`
+	UserID         uint64    `json:"user_id" gorm:"not null;index"`
+	ShortURLID     *uint64   `json:"short_url_id,omitempty" gorm:"index"`
+	ThresholdType  string    `json:"threshold_type" gorm:"size:50;not null"` // "clicks", "unique_clicks", "conversion_rate"
+	ThresholdValue int64     `json:"threshold_value" gorm:"not null"`
+	CurrentValue   int64     `json:"current_value" gorm:"default:0"`
+	IsEnabled      bool      `json:"is_enabled" gorm:"default:true"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// SystemError represents a system-level error that occurred
+type SystemError struct {
+	ID        uint64    `json:"id" gorm:"primaryKey"`
+	Severity  string    `json:"severity" gorm:"size:20;not null"` // "low", "medium", "high", "critical"
+	Component string    `json:"component" gorm:"size:100;not null"`
+	Message   string    `json:"message" gorm:"type:text;not null"`
+	Details   string    `json:"details,omitempty" gorm:"type:text"`
+	Stack     string    `json:"stack,omitempty" gorm:"type:text"`
+	UserID    *uint64   `json:"user_id,omitempty" gorm:"index"`
+	RequestID string    `json:"request_id,omitempty" gorm:"size:100;index"`
+	CreatedAt time.Time `json:"created_at"`
+	ResolvedAt *time.Time `json:"resolved_at,omitempty"`
+}
+
+// SystemAlert represents a system alert notification
+type SystemAlert struct {
+	ID        uint64    `json:"id" gorm:"primaryKey"`
+	Type      string    `json:"type" gorm:"size:50;not null"` // "maintenance", "security", "performance", "outage"
+	Message   string    `json:"message" gorm:"type:text;not null"`
+	Severity  string    `json:"severity" gorm:"size:20;not null"` // "info", "warning", "error", "critical"
+	Details   string    `json:"details,omitempty" gorm:"type:text"`
+	IsActive  bool      `json:"is_active" gorm:"default:true"`
+	StartsAt  *time.Time `json:"starts_at,omitempty"`
+	EndsAt    *time.Time `json:"ends_at,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// NewsItem represents a news item for competitive intelligence
+type NewsItem struct {
+	ID          uint64    `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	URL         string    `json:"url"`
+	Source      string    `json:"source"`
+	PublishedAt time.Time `json:"published_at"`
+	Date        time.Time `json:"date"`
+	Category    string    `json:"category"`
+	Summary     string    `json:"summary"`
+	Sentiment   string    `json:"sentiment,omitempty"` // "positive", "negative", "neutral"
+	Relevance   float64   `json:"relevance,omitempty"`
+}

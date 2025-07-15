@@ -34,6 +34,7 @@ type URLRepository interface {
 	// URL queries
 	ExistsByShortCode(ctx context.Context, shortCode string) (bool, error)
 	GetByUserID(ctx context.Context, userID uint, offset, limit int) ([]*domain.ShortURL, int64, error)
+	GetUserURLs(ctx context.Context, userID uint, offset, limit int) ([]*domain.ShortURL, int64, error)
 	GetActiveByShortCode(ctx context.Context, shortCode string) (*domain.ShortURL, error)
 	
 	// URL operations

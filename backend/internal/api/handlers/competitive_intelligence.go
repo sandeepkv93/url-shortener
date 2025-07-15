@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"url-shortener/internal/api/middleware"
+	"url-shortener/internal/core/domain"
 	"url-shortener/internal/core/ports"
 )
 
@@ -408,7 +409,7 @@ func (h *CompetitiveIntelligenceHandler) getImprovementAreas(comparison map[stri
 	return areas
 }
 
-func (h *CompetitiveIntelligenceHandler) getPriorityRecommendations(gaps []interface{}) []string {
+func (h *CompetitiveIntelligenceHandler) getPriorityRecommendations(gaps []domain.OpportunityGap) []string {
 	recommendations := []string{}
 	// Add logic to extract high-priority recommendations
 	recommendations = append(recommendations, "Focus on top 3 performance gaps")
@@ -417,18 +418,22 @@ func (h *CompetitiveIntelligenceHandler) getPriorityRecommendations(gaps []inter
 	return recommendations
 }
 
-func (h *CompetitiveIntelligenceHandler) prioritizeOpportunities(opportunities []interface{}) []interface{} {
+func (h *CompetitiveIntelligenceHandler) prioritizeOpportunities(opportunities []domain.OpportunityGap) []domain.OpportunityGap {
 	// Simple prioritization - in a real implementation you'd sort by impact and feasibility
 	return opportunities
 }
 
-func (h *CompetitiveIntelligenceHandler) countByImpact(opportunities []interface{}, impact string) int {
+func (h *CompetitiveIntelligenceHandler) countByImpact(opportunities []domain.OpportunityGap, impact string) int {
 	count := 0
-	// Add counting logic based on impact level
+	for _, opportunity := range opportunities {
+		if opportunity.Impact == impact {
+			count++
+		}
+	}
 	return count
 }
 
-func (h *CompetitiveIntelligenceHandler) getStrategicFocus(opportunities []interface{}) []string {
+func (h *CompetitiveIntelligenceHandler) getStrategicFocus(opportunities []domain.OpportunityGap) []string {
 	return []string{
 		"AI-powered analytics implementation",
 		"Privacy-first tracking solutions", 
@@ -455,7 +460,7 @@ func (h *CompetitiveIntelligenceHandler) getAttackVectors(weaknesses []string) [
 	return vectors
 }
 
-func (h *CompetitiveIntelligenceHandler) calculateOpportunityScore(trend interface{}) float64 {
+func (h *CompetitiveIntelligenceHandler) calculateOpportunityScore(trend domain.Trend) float64 {
 	// Simple scoring algorithm
 	return 75.5 // Mock score
 }
@@ -479,7 +484,7 @@ func (h *CompetitiveIntelligenceHandler) getTrendActionPlan(trendName string) []
 	return []string{"Research trend implementation", "Develop strategy"}
 }
 
-func (h *CompetitiveIntelligenceHandler) getTrendPriorities(trends []interface{}) []map[string]interface{} {
+func (h *CompetitiveIntelligenceHandler) getTrendPriorities(trends []domain.Trend) []map[string]interface{} {
 	return []map[string]interface{}{
 		{"trend": "AI-Powered Analytics", "priority": "high", "timeline": "6 months"},
 		{"trend": "Privacy-First Tracking", "priority": "high", "timeline": "3 months"},
@@ -487,7 +492,7 @@ func (h *CompetitiveIntelligenceHandler) getTrendPriorities(trends []interface{}
 	}
 }
 
-func (h *CompetitiveIntelligenceHandler) getInvestmentRecommendations(trends []interface{}) []map[string]interface{} {
+func (h *CompetitiveIntelligenceHandler) getInvestmentRecommendations(trends []domain.Trend) []map[string]interface{} {
 	return []map[string]interface{}{
 		{"area": "AI/ML capabilities", "investment": "high", "roi_potential": "very_high"},
 		{"area": "Privacy compliance", "investment": "medium", "roi_potential": "high"},
@@ -495,12 +500,17 @@ func (h *CompetitiveIntelligenceHandler) getInvestmentRecommendations(trends []i
 	}
 }
 
-func (h *CompetitiveIntelligenceHandler) countByPriority(gaps []interface{}, priority string) int {
-	// Add counting logic
-	return 2 // Mock count
+func (h *CompetitiveIntelligenceHandler) countByPriority(gaps []domain.OpportunityGap, priority string) int {
+	count := 0
+	for _, gap := range gaps {
+		if gap.Priority == priority {
+			count++
+		}
+	}
+	return count
 }
 
-func (h *CompetitiveIntelligenceHandler) getQuickWins(gaps []interface{}) []map[string]interface{} {
+func (h *CompetitiveIntelligenceHandler) getQuickWins(gaps []domain.OpportunityGap) []map[string]interface{} {
 	return []map[string]interface{}{
 		{"area": "Mobile responsiveness", "effort": "low", "impact": "medium"},
 		{"area": "Page load optimization", "effort": "medium", "impact": "high"},

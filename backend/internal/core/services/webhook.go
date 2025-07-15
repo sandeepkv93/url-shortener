@@ -2,13 +2,10 @@ package services
 
 import (
 	"context"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"time"
 
 	"url-shortener/internal/core/domain"
@@ -104,10 +101,7 @@ func (s *webhookService) GetWebhook(ctx context.Context, webhookID uint64, userI
 	}
 	
 	if webhook.UserID != userID {
-		return nil, &domain.NotFoundError{
-			Resource: "webhook",
-			ID:       fmt.Sprintf("%d", webhookID),
-		}
+		return nil, domain.NewNotFoundError("webhook")
 	}
 	
 	return webhook, nil
@@ -379,10 +373,7 @@ func (s *webhookService) GetDelivery(ctx context.Context, deliveryID uint64, use
 	}
 	
 	if webhook.UserID != userID {
-		return nil, &domain.NotFoundError{
-			Resource: "webhook_delivery",
-			ID:       fmt.Sprintf("%d", deliveryID),
-		}
+		return nil, domain.NewNotFoundError("webhook_delivery")
 	}
 	
 	return delivery, nil

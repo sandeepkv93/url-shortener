@@ -154,7 +154,7 @@ type AdvancedAnalytics struct {
 	UserID              uint                    `json:"user_id"`
 	Period              string                  `json:"period"`
 	GeneratedAt         time.Time               `json:"generated_at"`
-	PerformanceMetrics  PerformanceMetrics      `json:"performance_metrics"`
+	PerformanceMetrics  BIPerformanceMetrics    `json:"performance_metrics"`
 	AudienceInsights    AudienceInsights        `json:"audience_insights"`
 	ContentAnalytics    ContentAnalytics        `json:"content_analytics"`
 	CompetitiveAnalysis CompetitiveAnalysis     `json:"competitive_analysis"`
@@ -162,7 +162,7 @@ type AdvancedAnalytics struct {
 	RecommendationEngine RecommendationEngine  `json:"recommendation_engine"`
 }
 
-type PerformanceMetrics struct {
+type BIPerformanceMetrics struct {
 	CTR                 float64               `json:"ctr"`                   // Click-through rate
 	ConversionRate      float64               `json:"conversion_rate"`
 	BounceRate          float64               `json:"bounce_rate"`
@@ -283,35 +283,152 @@ type CompetitiveAnalysis struct {
 }
 
 type MarketPosition struct {
-	Rank           int     `json:"rank"`
-	MarketShare    float64 `json:"market_share"`
-	GrowthRate     float64 `json:"growth_rate"`
-	CompetitiveGap float64 `json:"competitive_gap"`
-	Strengths      []string `json:"strengths"`
-	Weaknesses     []string `json:"weaknesses"`
+	UserID                uint                `json:"user_id"`
+	Rank                  int                 `json:"rank"`
+	Tier                  string              `json:"tier"`
+	Percentile            float64             `json:"percentile"`
+	MarketShare           float64             `json:"market_share"`
+	Ranking               int                 `json:"ranking"`
+	GrowthRate            float64             `json:"growth_rate"`
+	CompetitiveGap        float64             `json:"competitive_gap"`
+	Metrics               PositionMetrics     `json:"metrics"`
+	Strengths             []string            `json:"strengths"`
+	Weaknesses            []string            `json:"weaknesses"`
+	Opportunities         []string            `json:"opportunities"`
+	Threats               []string            `json:"threats"`
+	CompetitiveAdvantages []string            `json:"competitive_advantages"`
+	RecommendedActions    []string            `json:"recommended_actions"`
+	UpdatedAt             time.Time           `json:"updated_at"`
+}
+
+type PositionMetrics struct {
+	TotalClicks     int64   `json:"total_clicks"`
+	ClicksPerURL    float64 `json:"clicks_per_url"`
+	ConversionRate  float64 `json:"conversion_rate"`
+	RetentionRate   float64 `json:"retention_rate"`
+	GrowthRate      float64 `json:"growth_rate"`
+	ClickShare      float64 `json:"click_share"`
+	URLShare        float64 `json:"url_share"`
+	EngagementScore float64 `json:"engagement_score"`
+	ReachScore      float64 `json:"reach_score"`
 }
 
 type CompetitorData struct {
-	CompetitorID    string  `json:"competitor_id"`
-	Name            string  `json:"name"`
-	MarketShare     float64 `json:"market_share"`
-	GrowthRate      float64 `json:"growth_rate"`
-	PerformanceGap  float64 `json:"performance_gap"`
+	ID              string              `json:"id"`
+	CompetitorID    string              `json:"competitor_id"`
+	Name            string              `json:"name"`
+	Industry        string              `json:"industry"`
+	Website         string              `json:"website"`
+	Description     string              `json:"description"`
+	MarketShare     float64             `json:"market_share"`
+	Founded         int                 `json:"founded"`
+	Employees       int                 `json:"employees"`
+	Revenue         float64             `json:"revenue"`
+	GrowthRate      float64             `json:"growth_rate"`
+	PerformanceGap  float64             `json:"performance_gap"`
 	KeyMetrics      map[string]interface{} `json:"key_metrics"`
+	Metrics         CompetitorMetrics   `json:"metrics"`
+	Strengths       []string            `json:"strengths"`
+	Weaknesses      []string            `json:"weaknesses"`
+	RecentNews      []NewsItem          `json:"recent_news"`
+	SocialMedia     SocialMediaData     `json:"social_media"`
+	TechnologyStack []string            `json:"technology_stack"`
+	Partnerships    []string            `json:"partnerships"`
+	LastUpdated     time.Time           `json:"last_updated"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+}
+
+type CompetitorMetrics struct {
+	MonthlyActiveUsers int64   `json:"monthly_active_users"`
+	URLsCreated        int64   `json:"urls_created"`
+	ClicksPerMonth     int64   `json:"clicks_per_month"`
+	ConversionRate     float64 `json:"conversion_rate"`
+	AverageClickTime   float64 `json:"average_click_time"`
+	GeographicReach    float64 `json:"geographic_reach"`
+	MobileUsage        float64 `json:"mobile_usage"`
+}
+
+type SocialMediaData struct {
+	TwitterFollowers  int64 `json:"twitter_followers"`
+	LinkedInFollowers int64 `json:"linkedin_followers"`
+	FacebookFollowers int64 `json:"facebook_followers"`
+	InstagramFollowers int64 `json:"instagram_followers"`
+	YouTubeSubscribers int64 `json:"youtube_subscribers"`
 }
 
 type BenchmarkData struct {
-	IndustryAverage map[string]float64 `json:"industry_average"`
-	TopPerformers   map[string]float64 `json:"top_performers"`
-	YourPerformance map[string]float64 `json:"your_performance"`
-	Percentile      map[string]float64 `json:"percentile"`
+	Industry        string              `json:"industry"`
+	DataSource      string              `json:"data_source"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+	Metrics         []BenchmarkMetric   `json:"metrics"`
+	IndustryAverage map[string]float64  `json:"industry_average"`
+	TopPerformers   map[string]float64  `json:"top_performers"`
+	YourPerformance map[string]float64  `json:"your_performance"`
+	Percentile      map[string]float64  `json:"percentile"`
 }
 
+type BenchmarkMetric struct {
+	Name         string  `json:"name"`
+	Value        float64 `json:"value"`
+	Unit         string  `json:"unit"`
+	Description  string  `json:"description"`
+	Tier         PerformanceTier `json:"tier"`
+	Median       float64 `json:"median"`
+	Average      float64 `json:"average"`
+	Percentile25 float64 `json:"percentile_25"`
+	Percentile75 float64 `json:"percentile_75"`
+	Percentile90 float64 `json:"percentile_90"`
+}
+
+type PerformanceTier string
+
+const (
+	PerformanceTierExcellent PerformanceTier = "excellent"
+	PerformanceTierGood      PerformanceTier = "good"
+	PerformanceTierAverage   PerformanceTier = "average"
+	PerformanceTierPoor      PerformanceTier = "poor"
+)
+
 type MarketTrends struct {
-	EmergingTrends    []Trend            `json:"emerging_trends"`
-	SeasonalPatterns  map[string]float64 `json:"seasonal_patterns"`
-	ConsumerBehavior  map[string]interface{} `json:"consumer_behavior"`
-	TechnologyTrends  []string           `json:"technology_trends"`
+	Industry              string             `json:"industry"`
+	TimeRange             string             `json:"time_range"`
+	UpdatedAt             time.Time          `json:"updated_at"`
+	GrowthMetrics         GrowthMetrics      `json:"growth_metrics"`
+	EmergingTrends        []Trend            `json:"emerging_trends"`
+	SeasonalPatterns      map[string]float64 `json:"seasonal_patterns"`
+	ConsumerBehavior      map[string]interface{} `json:"consumer_behavior"`
+	TechnologyTrends      []string           `json:"technology_trends"`
+	TechnologyAdoption    map[string]float64 `json:"technology_adoption"`
+	CustomerBehavior      CustomerBehavior   `json:"customer_behavior"`
+	CompetitiveLandscape  CompetitiveLandscape `json:"competitive_landscape"`
+}
+
+type CustomerBehavior struct {
+	AverageSessionDuration          float64            `json:"average_session_duration"`
+	BounceRate                      float64            `json:"bounce_rate"`
+	ConversionRate                  float64            `json:"conversion_rate"`
+	PreferredFeatures               []string           `json:"preferred_features"`
+	UsagePatterns                   map[string]float64 `json:"usage_patterns"`
+	MobileUsage                     float64            `json:"mobile_usage"`
+	ReturnVisitorRate               float64            `json:"return_visitor_rate"`
+	ConversionFunnelOptimization    float64            `json:"conversion_funnel_optimization"`
+}
+
+type CompetitiveLandscape struct {
+	MarketLeaders     []string           `json:"market_leaders"`
+	EmergingPlayers   []string           `json:"emerging_players"`
+	MarketConcentration float64          `json:"market_concentration"`
+	CompetitiveIntensity string          `json:"competitive_intensity"`
+	BarriersToEntry   []string           `json:"barriers_to_entry"`
+}
+
+type GrowthMetrics struct {
+	MarketSize                    float64 `json:"market_size"`
+	YearOverYearGrowth           float64 `json:"year_over_year_growth"`
+	ProjectedGrowth              float64 `json:"projected_growth"`
+	CompoundAnnualGrowthRate     float64 `json:"compound_annual_growth_rate"`
+	MarketSaturation             float64 `json:"market_saturation"`
+	AdoptionRate                 float64 `json:"adoption_rate"`
 }
 
 type Trend struct {
@@ -320,15 +437,24 @@ type Trend struct {
 	Impact      string  `json:"impact"`    // high, medium, low
 	Confidence  float64 `json:"confidence"`
 	Description string  `json:"description"`
+	Timeline    string  `json:"timeline"`
+	Adoption    float64 `json:"adoption"`
 }
 
 type OpportunityGap struct {
-	Area        string  `json:"area"`
-	Impact      string  `json:"impact"`
-	Effort      string  `json:"effort"`
-	Priority    string  `json:"priority"`
-	Description string  `json:"description"`
-	Potential   float64 `json:"potential"`
+	Area                 string   `json:"area"`
+	Impact               string   `json:"impact"`
+	Effort               string   `json:"effort"`
+	Priority             string   `json:"priority"`
+	Description          string   `json:"description"`
+	Potential            float64  `json:"potential"`
+	CurrentValue         float64  `json:"current_value"`
+	BenchmarkValue       float64  `json:"benchmark_value"`
+	GapPercentage        float64  `json:"gap_percentage"`
+	Recommendations      []string `json:"recommendations"`
+	EstimatedImpact      string   `json:"estimated_impact"`
+	ImplementationEffort string   `json:"implementation_effort"`
+	Timeline             string   `json:"timeline"`
 }
 
 type PredictiveInsights struct {
@@ -667,137 +793,6 @@ type JobStatus struct {
 	User *User `json:"user,omitempty" gorm:"foreignKey:UserID"`
 }
 
-// Competitive Intelligence Models
-
-type CompetitorData struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Industry     string            `json:"industry"`
-	Website      string            `json:"website"`
-	Description  string            `json:"description"`
-	MarketShare  float64           `json:"market_share"`
-	Founded      int               `json:"founded"`
-	Employees    int               `json:"employees"`
-	Revenue      float64           `json:"revenue"` // Million USD
-	Metrics      CompetitorMetrics `json:"metrics"`
-	Strengths    []string          `json:"strengths"`
-	Weaknesses   []string          `json:"weaknesses"`
-	RecentNews   []NewsItem        `json:"recent_news"`
-	UpdatedAt    time.Time         `json:"updated_at"`
-}
-
-type CompetitorMetrics struct {
-	MonthlyActiveUsers int64   `json:"monthly_active_users"`
-	URLsCreated        int64   `json:"urls_created"`
-	ClicksPerMonth     int64   `json:"clicks_per_month"`
-	ConversionRate     float64 `json:"conversion_rate"`
-	AverageClickTime   float64 `json:"average_click_time"`
-	GeographicReach    float64 `json:"geographic_reach"`
-	MobileUsage        float64 `json:"mobile_usage"`
-}
-
-type NewsItem struct {
-	Title   string    `json:"title"`
-	Date    time.Time `json:"date"`
-	Source  string    `json:"source"`
-	URL     string    `json:"url"`
-	Summary string    `json:"summary"`
-}
-
-type MarketPosition struct {
-	UserID               uint                  `json:"user_id"`
-	Tier                 string                `json:"tier"` // market_leader, strong_player, emerging_player, niche_player
-	Percentile           float64               `json:"percentile"`
-	MarketShare          float64               `json:"market_share"`
-	Ranking              int                   `json:"ranking"`
-	Metrics              PositionMetrics       `json:"metrics"`
-	Strengths            []string              `json:"strengths"`
-	Opportunities        []string              `json:"opportunities"`
-	Threats              []string              `json:"threats"`
-	CompetitiveAdvantages []string             `json:"competitive_advantages"`
-	RecommendedActions   []string              `json:"recommended_actions"`
-	UpdatedAt            time.Time             `json:"updated_at"`
-}
-
-type PositionMetrics struct {
-	ClickShare      float64 `json:"click_share"`
-	URLShare        float64 `json:"url_share"`
-	GrowthRate      float64 `json:"growth_rate"`
-	EngagementScore float64 `json:"engagement_score"`
-	ReachScore      float64 `json:"reach_score"`
-}
-
-type MarketTrends struct {
-	Industry             string                 `json:"industry"`
-	TimeRange            string                 `json:"time_range"`
-	GrowthMetrics        GrowthMetrics          `json:"growth_metrics"`
-	EmergingTrends       []Trend                `json:"emerging_trends"`
-	TechnologyAdoption   map[string]float64     `json:"technology_adoption"`
-	CustomerBehavior     CustomerBehavior       `json:"customer_behavior"`
-	CompetitiveLandscape map[string]interface{} `json:"competitive_landscape"`
-	UpdatedAt            time.Time              `json:"updated_at"`
-}
-
-type GrowthMetrics struct {
-	MarketSize                   float64 `json:"market_size"`
-	YearOverYearGrowth          float64 `json:"year_over_year_growth"`
-	ProjectedGrowth             float64 `json:"projected_growth"`
-	CompoundAnnualGrowthRate    float64 `json:"compound_annual_growth_rate"`
-}
-
-type Trend struct {
-	Name        string  `json:"name"`
-	Impact      string  `json:"impact"` // high, medium, low
-	Confidence  float64 `json:"confidence"`
-	Description string  `json:"description"`
-	Timeline    string  `json:"timeline"`
-	Adoption    float64 `json:"adoption"`
-}
-
-type CustomerBehavior struct {
-	AverageSessionDuration       float64 `json:"average_session_duration"`
-	BounceRate                   float64 `json:"bounce_rate"`
-	MobileUsage                  float64 `json:"mobile_usage"`
-	ReturnVisitorRate            float64 `json:"return_visitor_rate"`
-	ConversionFunnelOptimization float64 `json:"conversion_funnel_optimization"`
-}
-
-type BenchmarkData struct {
-	Industry         string                       `json:"industry"`
-	DataSource       string                       `json:"data_source"`
-	Metrics          map[string]BenchmarkMetric   `json:"metrics"`
-	PerformanceTiers map[string]PerformanceTier   `json:"performance_tiers"`
-	UpdatedAt        time.Time                    `json:"updated_at"`
-}
-
-type BenchmarkMetric struct {
-	Median       float64 `json:"median"`
-	Average      float64 `json:"average"`
-	Percentile25 float64 `json:"percentile_25"`
-	Percentile75 float64 `json:"percentile_75"`
-	Percentile90 float64 `json:"percentile_90"`
-	Unit         string  `json:"unit"`
-	Description  string  `json:"description"`
-}
-
-type PerformanceTier struct {
-	Description string             `json:"description"`
-	Criteria    map[string]float64 `json:"criteria"`
-}
-
-type OpportunityGap struct {
-	Area                 string   `json:"area"`
-	CurrentValue         float64  `json:"current_value"`
-	BenchmarkValue       float64  `json:"benchmark_value"`
-	GapPercentage        float64  `json:"gap_percentage"`
-	Impact               string   `json:"impact"`
-	Priority             string   `json:"priority"`
-	Description          string   `json:"description"`
-	Recommendations      []string `json:"recommendations"`
-	EstimatedImpact      string   `json:"estimated_impact"`
-	ImplementationEffort string   `json:"implementation_effort"`
-	Timeline             string   `json:"timeline"`
-}
 
 // Additional domain types for reporting and execution
 

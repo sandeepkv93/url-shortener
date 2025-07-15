@@ -37,6 +37,14 @@ type ValidationError struct {
 	Message string `json:"message"`
 }
 
+// Error implements the error interface
+func (e *ValidationError) Error() string {
+	if e.Message != "" {
+		return e.Message
+	}
+	return fmt.Sprintf("validation error for field '%s': %s", e.Field, e.Tag)
+}
+
 // InputValidationResult contains comprehensive input validation results
 type InputValidationResult struct {
 	IsValid bool              `json:"is_valid"`

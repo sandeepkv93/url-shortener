@@ -282,7 +282,7 @@ func (s *funnelService) GetFunnelStepAnalytics(ctx context.Context, funnelID uin
 
 func (s *funnelService) GetConversionTrend(ctx context.Context, funnelID uint, userID uint, period string) (map[string]int64, error) {
 	// Verify ownership
-	funnel, err := s.GetFunnel(ctx, funnelID, userID)
+	_, err := s.GetFunnel(ctx, funnelID, userID)
 	if err != nil {
 		return nil, err
 	}

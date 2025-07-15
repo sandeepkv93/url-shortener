@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"url-shortener/internal/api/middleware"
 	"url-shortener/internal/core/domain"
 	"url-shortener/internal/core/ports"
 )
@@ -24,7 +25,7 @@ func NewWebhookHandler(webhookService ports.WebhookService, logger ports.Logger)
 
 // CreateWebhook handles POST /webhooks
 func (h *WebhookHandler) CreateWebhook(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	
 	var req domain.WebhookCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -46,9 +47,9 @@ func (h *WebhookHandler) CreateWebhook(w http.ResponseWriter, r *http.Request) {
 
 // GetUserWebhooks handles GET /webhooks
 func (h *WebhookHandler) GetUserWebhooks(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	
-	offset, limit := getPaginationParams(r)
+	offset, limit := h.getPaginationParams(r)
 	
 	webhooks, total, err := h.webhookService.GetUserWebhooks(r.Context(), uint64(userID), offset, limit)
 	if err != nil {
@@ -68,7 +69,7 @@ func (h *WebhookHandler) GetUserWebhooks(w http.ResponseWriter, r *http.Request)
 
 // GetWebhook handles GET /webhooks/{id}
 func (h *WebhookHandler) GetWebhook(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -85,7 +86,7 @@ func (h *WebhookHandler) GetWebhook(w http.ResponseWriter, r *http.Request) {
 
 // UpdateWebhook handles PUT /webhooks/{id}
 func (h *WebhookHandler) UpdateWebhook(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -111,7 +112,7 @@ func (h *WebhookHandler) UpdateWebhook(w http.ResponseWriter, r *http.Request) {
 
 // DeleteWebhook handles DELETE /webhooks/{id}
 func (h *WebhookHandler) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -128,7 +129,7 @@ func (h *WebhookHandler) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
 
 // ActivateWebhook handles POST /webhooks/{id}/activate
 func (h *WebhookHandler) ActivateWebhook(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -145,7 +146,7 @@ func (h *WebhookHandler) ActivateWebhook(w http.ResponseWriter, r *http.Request)
 
 // DeactivateWebhook handles POST /webhooks/{id}/deactivate
 func (h *WebhookHandler) DeactivateWebhook(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -162,7 +163,7 @@ func (h *WebhookHandler) DeactivateWebhook(w http.ResponseWriter, r *http.Reques
 
 // TestWebhook handles POST /webhooks/{id}/test
 func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -179,13 +180,13 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 
 // GetWebhookDeliveries handles GET /webhooks/{id}/deliveries
 func (h *WebhookHandler) GetWebhookDeliveries(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
 	}
 	
-	offset, limit := getPaginationParams(r)
+	offset, limit := h.getPaginationParams(r)
 	
 	deliveries, total, err := h.webhookService.GetWebhookDeliveries(r.Context(), webhookID, uint64(userID), offset, limit)
 	if err != nil {
@@ -205,7 +206,7 @@ func (h *WebhookHandler) GetWebhookDeliveries(w http.ResponseWriter, r *http.Req
 
 // GetDelivery handles GET /webhooks/deliveries/{id}
 func (h *WebhookHandler) GetDelivery(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	deliveryID := h.getDeliveryIDFromURL(w, r)
 	if deliveryID == 0 {
 		return
@@ -222,7 +223,7 @@ func (h *WebhookHandler) GetDelivery(w http.ResponseWriter, r *http.Request) {
 
 // RetryDelivery handles POST /webhooks/deliveries/{id}/retry
 func (h *WebhookHandler) RetryDelivery(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	deliveryID := h.getDeliveryIDFromURL(w, r)
 	if deliveryID == 0 {
 		return
@@ -239,7 +240,7 @@ func (h *WebhookHandler) RetryDelivery(w http.ResponseWriter, r *http.Request) {
 
 // GetWebhookStats handles GET /webhooks/{id}/stats
 func (h *WebhookHandler) GetWebhookStats(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -256,7 +257,7 @@ func (h *WebhookHandler) GetWebhookStats(w http.ResponseWriter, r *http.Request)
 
 // GetFailedDeliveries handles GET /webhooks/{id}/failed-deliveries
 func (h *WebhookHandler) GetFailedDeliveries(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserIDFromContext(r.Context())
+	userID := middleware.GetUserIDFromContext(r.Context())
 	webhookID := h.getWebhookIDFromURL(w, r)
 	if webhookID == 0 {
 		return
@@ -362,17 +363,22 @@ func (h *WebhookHandler) handleServiceError(w http.ResponseWriter, err error) {
 	switch e := err.(type) {
 	case *domain.ValidationError:
 		h.sendError(w, e, http.StatusBadRequest)
-	case *domain.NotFoundError:
-		h.sendError(w, e, http.StatusNotFound)
-	case *domain.ConflictError:
-		h.sendError(w, e, http.StatusConflict)
 	default:
-		h.logger.Error("Webhook service error", map[string]interface{}{
-			"error": err.Error(),
-		})
-		h.sendError(w, &domain.InternalError{
-			Message: "Internal server error",
-		}, http.StatusInternalServerError)
+		switch err {
+		case domain.ErrNotFound:
+			h.sendError(w, &domain.ValidationError{
+				Field:   "resource",
+				Message: "Resource not found",
+			}, http.StatusNotFound)
+		default:
+			h.logger.Error("Webhook service error", map[string]interface{}{
+				"error": err.Error(),
+			})
+			h.sendError(w, &domain.ValidationError{
+				Field:   "internal",
+				Message: "Internal server error",
+			}, http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -400,4 +406,23 @@ func (h *WebhookHandler) sendError(w http.ResponseWriter, err error, statusCode 
 	}
 	
 	json.NewEncoder(w).Encode(errorResponse)
+}
+
+func (h *WebhookHandler) getPaginationParams(r *http.Request) (offset, limit int) {
+	offset = 0
+	limit = 20 // default limit
+
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsedOffset, err := strconv.Atoi(offsetStr); err == nil && parsedOffset >= 0 {
+			offset = parsedOffset
+		}
+	}
+
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 100 {
+			limit = parsedLimit
+		}
+	}
+
+	return offset, limit
 }

@@ -51,7 +51,7 @@ func (s *competitiveIntelligenceService) AnalyzeMarketPosition(ctx context.Conte
 	}
 
 	// Calculate market position metrics
-	position := s.calculateMarketPosition(userStats, globalStats)
+	position := s.calculateMarketPosition(userID, userStats, globalStats)
 
 	return position, nil
 }
@@ -177,8 +177,9 @@ func (s *competitiveIntelligenceService) GetIndustryBenchmarks(ctx context.Conte
 		DataSource: "Industry analysis and market research",
 		UpdatedAt:  time.Now(),
 		
-		Metrics: map[string]domain.BenchmarkMetric{
-			"click_through_rate": {
+		Metrics: []domain.BenchmarkMetric{
+			{
+				Name:         "click_through_rate",
 				Median:       3.2,
 				Average:      4.1,
 				Percentile25: 1.8,
@@ -186,8 +187,10 @@ func (s *competitiveIntelligenceService) GetIndustryBenchmarks(ctx context.Conte
 				Percentile90: 9.7,
 				Unit:         "percentage",
 				Description:  "Average click-through rate for shortened URLs",
+				Tier:         domain.PerformanceTierGood,
 			},
-			"conversion_rate": {
+			{
+				Name:         "conversion_rate",
 				Median:       2.8,
 				Average:      3.5,
 				Percentile25: 1.2,
@@ -195,8 +198,10 @@ func (s *competitiveIntelligenceService) GetIndustryBenchmarks(ctx context.Conte
 				Percentile90: 8.3,
 				Unit:         "percentage",
 				Description:  "Conversion rate from click to desired action",
+				Tier:         domain.PerformanceTierAverage,
 			},
-			"session_duration": {
+			{
+				Name:         "session_duration",
 				Median:       185.5,
 				Average:      210.7,
 				Percentile25: 92.3,
@@ -204,8 +209,10 @@ func (s *competitiveIntelligenceService) GetIndustryBenchmarks(ctx context.Conte
 				Percentile90: 425.6,
 				Unit:         "seconds",
 				Description:  "Average session duration on target pages",
+				Tier:         domain.PerformanceTierGood,
 			},
-			"bounce_rate": {
+			{
+				Name:         "bounce_rate",
 				Median:       34.2,
 				Average:      38.7,
 				Percentile25: 21.5,
@@ -213,8 +220,10 @@ func (s *competitiveIntelligenceService) GetIndustryBenchmarks(ctx context.Conte
 				Percentile90: 68.9,
 				Unit:         "percentage",
 				Description:  "Percentage of single-page sessions",
+				Tier:         domain.PerformanceTierAverage,
 			},
-			"mobile_usage": {
+			{
+				Name:         "mobile_usage",
 				Median:       67.8,
 				Average:      69.2,
 				Percentile25: 58.4,
@@ -222,8 +231,10 @@ func (s *competitiveIntelligenceService) GetIndustryBenchmarks(ctx context.Conte
 				Percentile90: 84.3,
 				Unit:         "percentage",
 				Description:  "Percentage of clicks from mobile devices",
+				Tier:         domain.PerformanceTierGood,
 			},
-			"geographic_diversity": {
+			{
+				Name:         "geographic_diversity",
 				Median:       12.5,
 				Average:      15.8,
 				Percentile25: 6.2,
@@ -231,50 +242,57 @@ func (s *competitiveIntelligenceService) GetIndustryBenchmarks(ctx context.Conte
 				Percentile90: 32.7,
 				Unit:         "countries",
 				Description:  "Number of countries generating significant traffic",
+				Tier:         domain.PerformanceTierAverage,
 			},
 		},
 		
-		PerformanceTiers: map[string]domain.PerformanceTier{
-			"top_performer": {
-				Description: "Top 10% of performers in the industry",
-				Criteria: map[string]float64{
-					"click_through_rate": 8.5,
-					"conversion_rate":    7.2,
-					"session_duration":   380.0,
-					"bounce_rate":        25.0,
-				},
-			},
-			"above_average": {
-				Description: "Above industry average performers",
-				Criteria: map[string]float64{
-					"click_through_rate": 5.5,
-					"conversion_rate":    4.8,
-					"session_duration":   250.0,
-					"bounce_rate":        30.0,
-				},
-			},
-			"average": {
-				Description: "Industry average performance",
-				Criteria: map[string]float64{
-					"click_through_rate": 4.1,
-					"conversion_rate":    3.5,
-					"session_duration":   210.7,
-					"bounce_rate":        38.7,
-				},
-			},
-			"below_average": {
-				Description: "Below industry average, needs improvement",
-				Criteria: map[string]float64{
-					"click_through_rate": 2.5,
-					"conversion_rate":    2.0,
-					"session_duration":   150.0,
-					"bounce_rate":        50.0,
-				},
-			},
+		IndustryAverage: map[string]float64{
+			"click_through_rate": 4.1,
+			"conversion_rate":    3.5,
+			"session_duration":   210.7,
+			"bounce_rate":        38.7,
+			"mobile_usage":       69.2,
+			"geographic_diversity": 15.8,
+		},
+		
+		TopPerformers: map[string]float64{
+			"click_through_rate": 9.7,
+			"conversion_rate":    8.3,
+			"session_duration":   425.6,
+			"bounce_rate":        21.5,
+			"mobile_usage":       84.3,
+			"geographic_diversity": 32.7,
+		},
+		
+		YourPerformance: map[string]float64{
+			"click_through_rate": 3.2,
+			"conversion_rate":    2.8,
+			"session_duration":   185.5,
+			"bounce_rate":        34.2,
+			"mobile_usage":       67.8,
+			"geographic_diversity": 12.5,
+		},
+		
+		Percentile: map[string]float64{
+			"click_through_rate": 35.2,
+			"conversion_rate":    28.7,
+			"session_duration":   42.1,
+			"bounce_rate":        58.3,
+			"mobile_usage":       45.9,
+			"geographic_diversity": 31.4,
 		},
 	}
 
 	return benchmarks, nil
+}
+
+func (s *competitiveIntelligenceService) findMetricByName(metrics []domain.BenchmarkMetric, name string) *domain.BenchmarkMetric {
+	for _, metric := range metrics {
+		if metric.Name == name {
+			return &metric
+		}
+	}
+	return nil
 }
 
 func (s *competitiveIntelligenceService) ComparePerformance(ctx context.Context, userID uint, competitorID string) (map[string]float64, error) {
@@ -338,8 +356,8 @@ func (s *competitiveIntelligenceService) GetPerformanceGaps(ctx context.Context,
 
 	// Check click-through rate
 	userCTR := s.calculateUserCTR(userStats)
-	ctrBenchmark := benchmarks.Metrics["click_through_rate"]
-	if userCTR < ctrBenchmark.Percentile75 {
+	ctrBenchmark := s.findMetricByName(benchmarks.Metrics, "click_through_rate")
+	if ctrBenchmark != nil && userCTR < ctrBenchmark.Percentile75 {
 		gaps = append(gaps, domain.OpportunityGap{
 			Area:        "Click-Through Rate",
 			CurrentValue: userCTR,
@@ -362,8 +380,8 @@ func (s *competitiveIntelligenceService) GetPerformanceGaps(ctx context.Context,
 
 	// Check conversion rate
 	userConversion := s.calculateUserConversionRate(userStats)
-	conversionBenchmark := benchmarks.Metrics["conversion_rate"]
-	if userConversion < conversionBenchmark.Percentile75 {
+	conversionBenchmark := s.findMetricByName(benchmarks.Metrics, "conversion_rate")
+	if conversionBenchmark != nil && userConversion < conversionBenchmark.Percentile75 {
 		gaps = append(gaps, domain.OpportunityGap{
 			Area:        "Conversion Rate",
 			CurrentValue: userConversion,
@@ -387,8 +405,8 @@ func (s *competitiveIntelligenceService) GetPerformanceGaps(ctx context.Context,
 
 	// Check mobile usage optimization
 	userMobile := s.calculateUserMobileUsage(userStats)
-	mobileBenchmark := benchmarks.Metrics["mobile_usage"]
-	if userMobile < mobileBenchmark.Median {
+	mobileBenchmark := s.findMetricByName(benchmarks.Metrics, "mobile_usage")
+	if mobileBenchmark != nil && userMobile < mobileBenchmark.Median {
 		gaps = append(gaps, domain.OpportunityGap{
 			Area:        "Mobile Optimization",
 			CurrentValue: userMobile,
@@ -479,7 +497,7 @@ func (s *competitiveIntelligenceService) GetEmergingTrends(ctx context.Context, 
 
 // Helper methods for calculations and data generation
 
-func (s *competitiveIntelligenceService) calculateMarketPosition(userStats *domain.DashboardStats, globalStats *domain.GlobalStats) *domain.MarketPosition {
+func (s *competitiveIntelligenceService) calculateMarketPosition(userID uint, userStats *domain.DashboardStats, globalStats *domain.GlobalStats) *domain.MarketPosition {
 	// Calculate relative performance metrics
 	clickShare := float64(userStats.TotalClicks) / float64(globalStats.TotalClicks) * 100
 	urlShare := float64(userStats.TotalURLs) / float64(globalStats.TotalURLs) * 100
@@ -503,7 +521,7 @@ func (s *competitiveIntelligenceService) calculateMarketPosition(userStats *doma
 	}
 
 	return &domain.MarketPosition{
-		UserID:      userStats.UserID,
+		UserID:      userID,
 		Tier:        tier,
 		Percentile:  percentile,
 		MarketShare: clickShare,
@@ -852,14 +870,13 @@ func (s *competitiveIntelligenceService) getRecentNews(id string) []domain.NewsI
 	}
 }
 
-func (s *competitiveIntelligenceService) getCompetitiveLandscape() map[string]interface{} {
-	return map[string]interface{}{
-		"market_leaders": []string{"Bitly", "Linktree", "TinyURL"},
-		"emerging_players": []string{"Rebrandly", "ShortLink Pro", "ClickMeter"},
-		"market_concentration": 65.8, // Percentage controlled by top 5 players
-		"barriers_to_entry": "medium",
-		"innovation_rate": "high",
-		"customer_switching_cost": "low",
+func (s *competitiveIntelligenceService) getCompetitiveLandscape() domain.CompetitiveLandscape {
+	return domain.CompetitiveLandscape{
+		MarketLeaders:       []string{"Bitly", "Linktree", "TinyURL"},
+		EmergingPlayers:     []string{"Rebrandly", "ShortLink Pro", "ClickMeter"},
+		MarketConcentration: 65.8, // Percentage controlled by top 5 players
+		CompetitiveIntensity: "high",
+		BarriersToEntry:     []string{"medium technical barrier", "low capital requirement", "high marketing cost"},
 	}
 }
 
